@@ -1,1 +1,33 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SISTEMA · Central de TI</title><link rel="stylesheet" href="/style.css"></head><body><aside><div class="brand">S<span> SISTEMA</span></div><p>OPERAÇÕES DE TI</p><nav><button data-page="dashboard">◫ Visão geral</button><button data-page="tickets">☷ Chamados</button><button data-page="assets">▣ Equipamentos</button><button data-page="monitor">◉ Monitoramento</button><button data-page="remote">↗ Acesso remoto</button></nav><footer>Central de serviços<br><small>Seu ambiente, conectado.</small></footer></aside><main><header><span>Workspace / <b id="breadcrumb">Visão geral</b></span><button id="logout" hidden>Sair</button></header><div id="notice" role="status"></div><section id="content"></section></main><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080f2d">
+  <title>Servitec · Central de TI</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <aside aria-label="Menu principal">
+    <div class="brand" aria-label="Servitec, central de TI">
+      <span class="brand-mark" aria-hidden="true">S</span>
+      <div><span class="brand-name">servitec</span><span class="brand-caption">CENTRAL DE TI</span></div>
+    </div>
+    <p class="nav-label">GESTÃO E TECNOLOGIA</p>
+    <nav aria-label="Módulos">
+      <button data-page="dashboard"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 10h18M10 10v11"/></svg> Visão geral</button>
+      <button data-page="tickets"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 9h8M8 13h5"/></svg> Chamados</button>
+      <button data-page="assets"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 16v5"/></svg> Equipamentos</button>
+      <button data-page="monitor"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-7 6 14 3-7h4"/></svg> Monitoramento</button>
+      <button data-page="remote"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg> Acesso remoto</button>
+    </nav>
+    <footer><span class="footer-dot" aria-hidden="true"></span> Tecnologia que move<br><small>o seu negócio.</small></footer>
+  </aside>
+  <main>
+    <header><span class="breadcrumb">Central de TI <span aria-hidden="true">/</span> <b id="breadcrumb">Visão geral</b></span><div class="header-actions"><span class="workspace-label">AMBIENTE INTERNO</span><button id="logout" hidden>Sair</button></div></header>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <section id="content" aria-label="Conteúdo principal"></section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

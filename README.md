@@ -34,7 +34,7 @@ Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está si
 
 ## Windows Server: inicio automatico na rede local
 
-Atualize o checkout, pare o `npm start` manual com Ctrl+C e clique com o botao direito em `instalar-inicio-automatico.bat` → **Executar como administrador**. Requer Node.js 24+ e Windows PowerShell 5.1 com os modulos ScheduledTasks e NetSecurity. Mantenha o BAT e a pasta `windows` dentro do projeto.
+Atualize o checkout, pare o `npm start` manual com Ctrl+C e clique com o botao direito em `instalar-inicio-automatico.bat` → **Executar como administrador**. Requer Node.js 24+ e Windows PowerShell 5.1 com os modulos ScheduledTasks e NetSecurity. O BAT e independente: mantenha apenas esse arquivo junto ao `server.mjs`. Ele contem o instalador e cria automaticamente `data/executar-servidor.ps1`, sem depender da pasta `windows`. Os PS1 dessa pasta ficam como referencia da implementacao original.
 
 O instalador encontra a pasta e o Node.js automaticamente, registra `Servitec-Sistema` no Agendador de Tarefas (conta SYSTEM, sem exigir login), executa imediatamente e verifica `/api/state`. Configura HOST=0.0.0.0, PORT=3000 e COOKIE_SECURE=0 para acesso HTTP pela LAN. A regra de firewall criada permite apenas LocalSubnet; regras mais amplas criadas anteriormente nao sao removidas. Nao encaminhe a porta 3000 para a internet. A publicacao com dominio e HTTPS requer configuracao separada. Como a tarefa executa como SYSTEM, mantenha a pasta em local administrado, com permissao de alteracao apenas para pessoas confiaveis.
 

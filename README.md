@@ -16,6 +16,8 @@ O servidor escuta em 127.0.0.1:3000. A primeira abertura solicita cadastro do ad
 ## Implementado
 
 - Cadastro inicial de administrador, login com hash scrypt, sessão de oito horas e logout.
+- Usuários e permissões: cadastro, edição, desativação e redefinição de senha por administrador; troca da própria senha para todos os perfis.
+- Perfis Administrador, Técnico e Consulta, com autorização verificada no servidor e revogação de sessões após mudanças de senha, perfil ou situação.
 - Chamados: criação, descrição, prioridade e transição de status.
 - Inventário com responsável e sistema operacional.
 - Token exclusivo por equipamento, exibido no cadastro.
@@ -26,7 +28,7 @@ Cadastre um equipamento e guarde seu token. Em um terminal da máquina Linux a m
 
 ## Próximas etapas
 
-Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está sinalizado como pendente na interface: será necessário selecionar e instalar RustDesk ou MeshCentral, configurar servidor, clientes, autorização e auditoria. Também faltam agentes Windows/macOS, alertas, SLA, anexos, e-mail, gestão de usuários e perfis, recuperação de senha, limitação de tentativas de login, revogação/rotação de tokens e trilha de auditoria. Antes de uso amplo, concluir esses controles e revisar a segurança e o backup. O cadastro inicial é destinado apenas ao primeiro administrador; todos os acessos atuais possuem as mesmas permissões.
+Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está sinalizado como pendente na interface: será necessário selecionar e instalar RustDesk ou MeshCentral, configurar servidor, clientes, autorização e auditoria. Também faltam agentes Windows/macOS, alertas, SLA, anexos, e-mail, recuperação de senha por e-mail, limitação de tentativas de login, revogação/rotação de tokens e trilha de auditoria. Antes de uso amplo, concluir esses controles e revisar a segurança e o backup. O cadastro inicial é destinado apenas ao primeiro administrador. Administradores podem redefinir senhas de outros usuários; a própria senha exige confirmação da senha atual.
 
 ## Validação
 
@@ -56,3 +58,21 @@ Stop-ScheduledTask -TaskName 'Servitec-Sistema'
 Unregister-ScheduledTask -TaskName 'Servitec-Sistema' -Confirm:$false
 Remove-NetFirewallRule -Name 'Servitec-Sistema-LAN-3000'
 ```
+
+
+## Usuários, senhas e permissões
+
+Entre como administrador e abra **Usuários e permissões**. Use **Novo usuário** para definir nome, e-mail de login, senha inicial (12 a 256 caracteres) e perfil. Em **Editar**, altere cadastro, perfil, situação ou defina nova senha para outro usuário. A senha existente nunca é exibida. Deixar a nova senha vazia mantém a anterior. Não há exclusão definitiva: desative a conta para bloquear acesso.
+
+| Permissão | Administrador | Técnico | Consulta |
+| --- | --- | --- | --- |
+| Visualizar chamados, inventário e monitoramento | Sim | Sim | Sim |
+| Criar chamados, mudar status e cadastrar equipamentos | Sim | Sim | Não |
+| Gerenciar usuários, perfis e redefinir senhas de outros | Sim | Não | Não |
+| Alterar a própria senha informando a atual | Sim | Sim | Sim |
+
+Os perfis se aplicam a todos os dados do sistema: ainda não há separação por empresa, setor ou solicitante. Controle remoto continua pendente. Alterações de senha, perfil ou situação encerram as sessões da conta afetada. O sistema impede desativar ou rebaixar o último administrador ativo. **Minha senha**, no topo da tela, permite alterar sua senha e exige novo login.
+
+### Atualizar uma instalação existente
+
+Pare a tarefa `Servitec-Sistema` (ou o processo manual), faça backup da pasta `data` com o sistema parado, atualize os arquivos pelo GitHub e inicie novamente. Não apague nem substitua o banco por um banco vazio. A primeira inicialização adiciona automaticamente as colunas de perfil e situação, preservando os dados e o login do administrador existente. Nenhuma senha padrão é criada. Atualize o navegador com Ctrl+F5. A migração foi testada com banco no formato anterior e após reinício, além dos testes de bloqueio de operações por perfil e dos fluxos de usuários no navegador.

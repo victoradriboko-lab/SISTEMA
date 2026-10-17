@@ -31,3 +31,28 @@ Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está si
 ## Validação
 
 `npm test` inicia uma instância isolada com banco temporário e testa cadastro, bloqueio de recadastro, login, rejeição de acesso sem autenticação, criação e alteração de chamados, proteção de origem, inventário, heartbeat e logout. Não valida interface em navegador ou acesso remoto. `npm run check` verifica a sintaxe do servidor.
+
+## Windows Server: inicio automatico na rede local
+
+Atualize o checkout, pare o `npm start` manual com Ctrl+C e clique com o botao direito em `instalar-inicio-automatico.bat` → **Executar como administrador**. Requer Node.js 24+ e Windows PowerShell 5.1 com os modulos ScheduledTasks e NetSecurity. Mantenha o BAT e a pasta `windows` dentro do projeto.
+
+O instalador encontra a pasta e o Node.js automaticamente, registra `Servitec-Sistema` no Agendador de Tarefas (conta SYSTEM, sem exigir login), executa imediatamente e verifica `/api/state`. Configura HOST=0.0.0.0, PORT=3000 e COOKIE_SECURE=0 para acesso HTTP pela LAN. A regra de firewall criada permite apenas LocalSubnet; regras mais amplas criadas anteriormente nao sao removidas. Nao encaminhe a porta 3000 para a internet. A publicacao com dominio e HTTPS requer configuracao separada. Como a tarefa executa como SYSTEM, mantenha a pasta em local administrado, com permissao de alteracao apenas para pessoas confiaveis.
+
+Dados continuam em `data/sistema.db`; o log fica em `data/servidor.log`. O instalador pode ser repetido para atualizar sua propria tarefa, mas preserva tarefas de mesmo nome com outra configuracao. Reinicia apos falha em intervalos de um minuto (ate 999 tentativas). A reinicializacao do Windows e o funcionamento da tarefa devem ser validados no proprio servidor; estes scripts nao foram executados em Windows no ambiente Linux de desenvolvimento.
+
+Para atualizar depois, no PowerShell como administrador, dentro da pasta do projeto:
+
+```powershell
+Stop-ScheduledTask -TaskName 'Servitec-Sistema'
+git pull --ff-only
+# Confirme que o pull concluiu sem erros antes de iniciar.
+Start-ScheduledTask -TaskName 'Servitec-Sistema'
+```
+
+Para desinstalar apenas a inicializacao automatica e sua regra de firewall, preservando os dados:
+
+```powershell
+Stop-ScheduledTask -TaskName 'Servitec-Sistema'
+Unregister-ScheduledTask -TaskName 'Servitec-Sistema' -Confirm:$false
+Remove-NetFirewallRule -Name 'Servitec-Sistema-LAN-3000'
+```

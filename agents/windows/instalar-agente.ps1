@@ -21,10 +21,10 @@ try {
         if ((Read-Host 'HTTP nao criptografa os dados. Confirma uso somente na rede local? Digite SIM') -cne 'SIM') { throw 'Use um endereco HTTPS para continuar.' }
         $allowLan = $true
     }
-    $secure = Read-Host 'Cole o token deste equipamento (entrada oculta)' -AsSecureString
+    $secure = Read-Host 'Cole o token da empresa cliente (entrada oculta)' -AsSecureString
     $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try { $token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
-    if ($token -notmatch '^[a-fA-F0-9]{64}$') { throw 'O token deve ser o token de 64 caracteres gerado no cadastro do equipamento.' }
+    if ($token -notmatch '^[a-fA-F0-9]{64}$') { throw 'O token deve ser o token de 64 caracteres gerado no cadastro da empresa cliente.' }
     $token = $token.ToLowerInvariant()
     # Confirma o destino sem desativar validacao TLS e sem seguir redirecionamentos com o token.
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -89,6 +89,6 @@ try {
     exit 0
 } catch {
     Write-Host ('ERRO: ' + $_.Exception.Message) -ForegroundColor Red
-    Write-Host 'Confira HTTPS, certificado, acesso ao servidor e o token do equipamento.'
+    Write-Host 'Confira HTTPS, certificado, acesso ao servidor e o token da empresa.'
     exit 1
 }

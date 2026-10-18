@@ -41,7 +41,7 @@ export function normalizeHeartbeat(payload,now=Date.now()){
   return {legacy:false,sampleId:payload.sampleId,observedAt,os:text(payload.os),agent:{version:text(payload.agent.version,40),platform:'windows'},machineId:payload.agent.machineId.toLowerCase(),metrics,inventory:payload.inventory===undefined?undefined:normalizeInventory(payload.inventory)};
 }
 
-export function createTelemetry({db,body,json,config,root}){
+export function createTelemetry({db,body,json,config,root,clients}){
   const columns=db.prepare('PRAGMA table_info(assets)').all().map(c=>c.name);
   for(const name of ['agent_info','inventory','machine_id','last_metrics_at','last_inventory_at'])if(!columns.includes(name))db.exec(`ALTER TABLE assets ADD COLUMN ${name} TEXT`);
   db.exec('CREATE TABLE IF NOT EXISTS telemetry(id INTEGER PRIMARY KEY,asset_id INTEGER NOT NULL,sample_id TEXT NOT NULL,observed_at INTEGER NOT NULL,received_at INTEGER NOT NULL,metrics TEXT NOT NULL,UNIQUE(asset_id,sample_id)); CREATE INDEX IF NOT EXISTS telemetry_asset_time ON telemetry(asset_id,observed_at DESC)');
@@ -49,14 +49,17 @@ export function createTelemetry({db,body,json,config,root}){
   async function publicRoute(req,res,path){
     if(!(path==='/api/heartbeat'&&req.method==='POST'||path==='/api/agent/check'&&req.method==='GET'))return false;
     const token=(req.headers.authorization||'').replace(/^Bearer /,'');
-    const asset=db.prepare('SELECT id,name,machine_id,agent_info,last_metrics_at,last_inventory_at,os,inventory IS NOT NULL AS has_inventory FROM assets WHERE token=?').get(token);
-    if(!asset){json(res,401,{error:'Token inválido'});return true;}
+    let asset=db.prepare('SELECT id,name,machine_id,agent_info,last_metrics_at,last_inventory_at,os,inventory IS NOT NULL AS has_inventory FROM assets WHERE token=?').get(token);
+    let client=clients?.getClient(token);
+    if(!asset&&!client){json(res,401,{error:'Token inválido'});return true;}
+    if(path==='/api/agent/check'&&client){json(res,200,{ok:true,protocolVersion:1,client});return true;}
     if(path==='/api/agent/check'){json(res,200,{ok:true,protocolVersion:1,asset:{id:asset.id,name:asset.name}});return true;}
     const sample=normalizeHeartbeat(await body(req));
-    if(asset.machine_id&&(sample.legacy||asset.machine_id!==sample.machineId))fail('Token vinculado a outra instalação. Renove o token do equipamento para reinstalar.',409);
+    if(client){client=clients.getClient(token);if(!client)fail('Token revogado',401);asset=clients.enroll(client,sample);if(!asset){json(res,200,{ok:true,requestInventory:true});return true;}}
+    if(!client&&asset.machine_id&&(sample.legacy||asset.machine_id!==sample.machineId))fail('Token vinculado a outra instalação. Renove o token do equipamento para reinstalar.',409);
     // Revalida o token depois da leitura do corpo, caso tenha sido renovado.
-    const current=db.prepare('SELECT id,name,machine_id,agent_info,last_metrics_at,last_inventory_at,os,inventory IS NOT NULL AS has_inventory FROM assets WHERE id=? AND token=?').get(asset.id,token);if(!current)fail('Token revogado',401);
-    if(current.machine_id&&(sample.legacy||current.machine_id!==sample.machineId))fail('Token vinculado a outra instalação',409);
+    const current=client?asset:db.prepare('SELECT id,name,machine_id,agent_info,last_metrics_at,last_inventory_at,os,inventory IS NOT NULL AS has_inventory FROM assets WHERE id=? AND token=?').get(asset.id,token);if(!current)fail('Token revogado',401);
+    if(!client&&current.machine_id&&(sample.legacy||current.machine_id!==sample.machineId))fail('Token vinculado a outra instalação',409);
     if(db.prepare('SELECT id FROM telemetry WHERE asset_id=? AND sample_id=?').get(asset.id,sample.sampleId)){json(res,200,{ok:true,duplicate:true});return true;}
     const now=Date.now(),observed=new Date(sample.observedAt).toISOString();
     db.exec('BEGIN IMMEDIATE');try{

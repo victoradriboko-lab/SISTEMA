@@ -219,3 +219,8 @@ input,textarea,select { background: #091321; border-color: #344a63; border-radiu
 @media(max-width:1100px) { .brand-name { font-size: 18px; } .brand-mark { width: 33px; } .brand-caption { font-size: 7px; } .auth-layout { grid-template-columns: 1fr; max-width: 680px; margin: auto; padding-top: 0; } .auth-hero { padding: 30px; } .tech-network { display: none; } .hero-tags { margin-top: 24px; } }
 @media(max-width:760px) { .brand-name { font-size: 22px; } .brand-caption { font-size: 8px; } .brand-mark { width: 39px; } .hero h1 { font-size: 30px; } .auth-layout { gap: 20px; } .auth-hero,.auth-form { padding: 26px; } }
 @media(max-width:420px) { .hero h1 { font-size: 27px; } .eyebrow { font-size: 9px; letter-spacing: 1px; } .auth-hero,.auth-form { padding: 23px 20px; } .hero-tags { gap: 5px; } .hero-tags span { padding: 6px; font-size: 9px; } }
+.client-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
+.client-toolbar > div { flex: 1; min-width: 190px; }
+.client-toolbar label { margin-top: 0; }
+[data-link-client],[data-duplicate] { display: block; margin-top: 8px; }
+[data-duplicate] { color: #ffe397; border-color: #78652d; }

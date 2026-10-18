@@ -11,7 +11,7 @@ Agente de telemetria, sem controle de tela, execucao remota de comandos ou acess
 
 ## Instalar
 
-1. No sistema, cadastre um equipamento em Equipamentos ou renove seu token confirmando sua senha. Cada maquina precisa de um registro e token exclusivos.
+1. No sistema, abra Equipamentos → Nova empresa / token. Cadastre a empresa e guarde o token exibido. Use o mesmo token em todos os computadores e servidores desse cliente. O primeiro inventario cadastra cada maquina automaticamente.
 2. Na pagina Equipamentos, clique em Baixar instalador .exe e salve na maquina monitorada.
 3. Abra ServitecAgentSetup.exe e aceite a solicitacao de administrador. O instalador extrai automaticamente os arquivos e abre a configuracao no console. A opcao Pacote ZIP continua disponivel; nesse caso, extraia TODOS os arquivos e execute instalar-agente.bat como administrador.
 4. Informe a URL base do servidor (sem caminhos) e cole o token na entrada oculta. O instalador verifica acesso e token antes de registrar o servico.
@@ -28,7 +28,7 @@ O executavel do agente tem checksum SHA-256 verificado pelo instalador; o instal
 - Limites: ate 500 programas de HKLM (32/64 bits), 300 servicos automaticos e 32 interfaces. Programas exclusivos do perfil de cada usuario nao sao coletados. Servicos representam o estado no momento do inventario, nao um teste em tempo real de disponibilidade da aplicacao. Uma consulta WMI indisponivel pode deixar campos vazios.
 - Comunicacao apenas de saida; nao abre portas na maquina monitorada. HTTPS usa a validacao normal do Windows e nao segue redirecionamentos com o token. Proxies/certificados corporativos precisam estar configurados para a conta de servico. Mantenha o relogio do Windows sincronizado; amostras com mais de cinco minutos no futuro ou sete dias no passado sao recusadas.
 - Em falha, guarda ate 120 amostras em disco, tenta novamente com espera progressiva de ate cinco minutos e descarta as mais antigas ao atingir o limite. A amostra atual vai antes do backlog, que e reenviado em lotes de ate tres; perdas acima do limite sao esperadas.
-- O servidor associa o token a identidade da primeira instalacao e recusa outra identidade. Ao reinstalar em outra maquina, renove o token. A renovacao limpa o inventario/metricas atuais para o novo agente, preservando o historico. Amostras repetidas nao duplicam o historico, e amostras antigas nao substituem dados mais recentes nem deixam a maquina aparentemente online.
+- O token da empresa aceita varias identidades de instalacao e separa seus equipamentos. Ao renovar esse token, atualize TODOS os agentes da empresa; os cadastros e historicos sao preservados. Tokens individuais antigos continuam funcionando para compatibilidade. Amostras repetidas nao duplicam o historico, e amostras antigas nao substituem dados mais recentes nem deixam a maquina aparentemente online.
 - Painel atualiza a cada 10 segundos; conexao fica offline apos dois minutos sem amostra atual. Historico retido por ate 48 horas, com limpeza periodica e limite aproximado de 5.760 amostras por equipamento. Detalhes mostram as ultimas 120 amostras.
 
 ## Operacao
@@ -37,7 +37,7 @@ Log: C:/ProgramData/ServitecAgent/agent.log. Rotacao em 1 MB, com um arquivo ant
 
 Para renovar token ou mudar URL: pare o servico, renove o token no sistema quando necessario e execute novamente o instalador. O instalador preserva a identidade local, atualiza o executavel e limpa a fila antiga para nao enviar amostras para o registro errado.
 
-Para remover: execute desinstalar-agente.bat como administrador. Configuracao e logs sao preservados. Renove o token no sistema para revogar a credencial antiga. Remova arquivos locais posteriormente se nao precisar deles.
+Para remover: execute desinstalar-agente.bat como administrador. Configuracao e logs sao preservados. A renovacao do token da empresa revoga a credencial em TODOS os agentes desse cliente. Remova arquivos locais posteriormente se nao precisar deles.
 
 ## Validacao desta entrega
 

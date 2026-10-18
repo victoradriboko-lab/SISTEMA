@@ -4,7 +4,7 @@ A aplicação possui duas entradas HTTP no mesmo processo Node.js e compartilha 
 
 ## Aparência
 
-No topo direito, abaixo do nome do cliente, o botão **Modo claro / Modo escuro** alterna a aparência do painel. A escolha fica salva no navegador para esta entrada e não altera a preferência do sistema interno. Não é necessário recarregar: filtros, formulários e gráficos permanecem como estão.
+No topo direito, abaixo do nome do cliente, a chave **Claro / Escuro** alterna a aparência do painel. A escolha fica salva no navegador para esta entrada e não altera a preferência do sistema interno. Não é necessário recarregar: filtros, formulários e gráficos permanecem como estão.
 
 ## Configuração
 

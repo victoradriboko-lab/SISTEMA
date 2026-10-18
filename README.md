@@ -183,7 +183,7 @@ Após atualizar o servidor, os agentes existentes continuam funcionando com seus
 
 ### Modo claro e escuro
 
-Depois de entrar, use o botão **Modo claro / Modo escuro** no topo direito, abaixo do nome e do perfil do usuário. Está disponível para administradores, técnicos, perfis internos personalizados e clientes. O botão mostra o tema atual; clique para alternar sem recarregar a página ou perder filtros, gráficos e formulários abertos.
+Depois de entrar, use a chave **Claro / Escuro** no topo direito, abaixo do nome e do perfil do usuário. Está disponível para administradores, técnicos, perfis internos personalizados e clientes. A chave indica o tema atual; clique ou use Espaço/Enter para alternar sem recarregar a página ou perder filtros, gráficos e formulários abertos.
 
 A preferência é salva no navegador, separadamente para o sistema interno e o Painel do Cliente. O padrão continua escuro no sistema e claro no painel. Recarregar ou entrar novamente no mesmo navegador conserva a escolha; outros dispositivos têm sua própria preferência. Se o navegador bloquear o armazenamento local, a troca continua funcionando na página atual, mas não fica salva.
 

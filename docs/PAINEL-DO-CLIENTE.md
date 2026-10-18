@@ -2,6 +2,10 @@
 
 A aplicação possui duas entradas HTTP no mesmo processo Node.js e compartilha o mesmo banco. O servidor interno conserva sua porta atual. Os clientes utilizam uma página própria com tema claro, login exclusivo, Visão geral e Meus chamados. Permissões e vínculos por empresa permanecem validados no servidor.
 
+## Aparência
+
+No topo direito, abaixo do nome do cliente, o botão **Modo claro / Modo escuro** alterna a aparência do painel. A escolha fica salva no navegador para esta entrada e não altera a preferência do sistema interno. Não é necessário recarregar: filtros, formulários e gráficos permanecem como estão.
+
 ## Configuração
 
 | Variável | Padrão | Uso |

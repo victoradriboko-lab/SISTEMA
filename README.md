@@ -181,6 +181,12 @@ Para renovar, selecione a empresa e clique em **Renovar token da empresa**, conf
 
 Após atualizar o servidor, os agentes existentes continuam funcionando com seus tokens individuais. Para usar o modelo por empresa, configure novamente o agente com o token da empresa e revise eventuais duplicados com os cadastros antigos depois de vinculá-los. O instalador atualizado já pede o token da empresa.
 
+### Modo claro e escuro
+
+Depois de entrar, use o botão **Modo claro / Modo escuro** no topo direito, abaixo do nome e do perfil do usuário. Está disponível para administradores, técnicos, perfis internos personalizados e clientes. O botão mostra o tema atual; clique para alternar sem recarregar a página ou perder filtros, gráficos e formulários abertos.
+
+A preferência é salva no navegador, separadamente para o sistema interno e o Painel do Cliente. O padrão continua escuro no sistema e claro no painel. Recarregar ou entrar novamente no mesmo navegador conserva a escolha; outros dispositivos têm sua própria preferência. Se o navegador bloquear o armazenamento local, a troca continua funcionando na página atual, mas não fica salva.
+
 ### Dashboard após o login
 
 O login abre o **Dashboard** com saudação, horário da última atualização e oito indicadores: clientes, equipamentos, agentes online, equipamentos sem comunicação, chamados abertos, em atendimento, resolvidos e equipamentos em alerta. Também apresenta conectividade, distribuição dos chamados por situação, até seis clientes com mais equipamentos, alertas operacionais e os cinco últimos chamados.

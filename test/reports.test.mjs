@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {once} from 'node:events';
 import {DatabaseSync} from 'node:sqlite';
-import {reportsCSV,renderReportChart} from '../public/reports.js';
+import {reportsCSV,renderReportChart,customizeReport} from '../public/reports.js';
 test('CSV preserva acentos e aspas e neutraliza fórmulas de planilha',()=>{
  const csv=reportsCSV({columns:[{key:'name',label:'Cliente'},{key:'total',label:'Total'}],rows:[{name:'Empresa "São José"; Centro',total:2},{name:' =HYPERLINK("x")',total:1},{name:'@SUM(A1)',total:1}]});
  assert.ok(csv.startsWith('\ufeff"Cliente";"Total"\r\n'));assert.ok(csv.includes('"Empresa ""São José""; Centro";"2"'));assert.ok(csv.includes('"\' =HYPERLINK'));assert.ok(csv.includes('"\'@SUM(A1)"'));assert.ok(csv.endsWith('\r\n'));
@@ -16,6 +16,14 @@ test('gráficos tratam 100%, ausência de dados e agrupam fatias sem perder tota
  const rows=Array.from({length:13},(_,i)=>({label:'Cliente '+i,total:i+1})),original=JSON.stringify(rows);
  const pie=renderReportChart({title:'Clientes',rows},'pie');assert.ok(pie.includes('total 91'));assert.ok(pie.includes('Outros grupos (agrupados)'));assert.ok(pie.includes('3 · 3,3%'));assert.equal(JSON.stringify(rows),original);
  for(const mode of ['bars','pie']){const empty=renderReportChart({title:'Vazio',rows:[{label:'Zero',total:0}]},mode);assert.ok(!empty.includes('<svg'));assert.ok(!empty.includes('NaN'));const unsafe=renderReportChart({title:'<script>',rows:[{label:'<img src=x>',total:1}]},mode);assert.ok(!unsafe.includes('<img'));assert.ok(!unsafe.includes('<script>'));}
+});
+test('personalização seleciona colunas, ordena sem alterar a origem e mantém o total',()=>{
+ const data={title:'Original',columns:[{key:'label',label:'Cliente'},{key:'total',label:'Total'},{key:'resolved',label:'Resolvidos'}],rows:[{label:'Beta',total:2,resolved:1},{label:'Alpha',total:5,resolved:0}],total:7};
+ const original=JSON.stringify(data),view=customizeReport(data,{title:'Meu relatório',columns:['label','resolved','online'],sortBy:'label',sortDirection:'asc'});
+ assert.equal(view.title,'Meu relatório');assert.deepEqual(view.columns.map(c=>c.key),['label','resolved']);assert.deepEqual(view.rows.map(r=>r.label),['Alpha','Beta']);assert.equal(view.total,7);assert.equal(JSON.stringify(data),original);
+ const csv=reportsCSV(view);assert.ok(!csv.includes('"Total"'));assert.ok(csv.includes('"Resolvidos"'));
+ assert.equal(customizeReport(data,{sortBy:'total',sortDirection:'desc'}).rows[0].total,5);
+ const many={title:'Grupos',rows:Array.from({length:8},(_,i)=>({label:'Grupo '+i,total:1}))};const pie=renderReportChart(many,'pie',5);assert.ok(pie.includes('4 · 50%'));assert.ok(pie.includes('total 8'));
 });
 test('relatórios validam clientes, operadores, tipos de atendimento, filtros e permissões',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'sistema-reports-')),child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3226',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
@@ -81,6 +89,15 @@ test('relatórios validam clientes, operadores, tipos de atendimento, filtros e 
  const typed=await call('tickets','POST',{title:'Atendimento externo',priority:'Alta',serviceType:'Externo'},admin);assert.equal(typed.status,201);assert.equal((await call('tickets','GET',undefined,admin)).data.find(t=>t.id===typed.data.id).service_type,'Externo');
  assert.equal((await call('tickets/'+typed.data.id,'PATCH',{serviceType:null},admin)).status,200);
  assert.equal((await call('tickets/'+ids[0],'PATCH',{serviceType:'Externo'},restricted)).status,403);assert.equal((await call('reports?type=tickets-service','GET',undefined,restricted)).status,403);
+ const modelDefinition={type:'tickets-service',filters:{from:'2026-01-01',to:'2026-12-31',serviceType:'Externo'},view:{title:'Demonstração externa',note:'Observação de teste',metric:'resolved',chartType:'pie',limit:5,sortBy:'total',sortDirection:'desc',columns:['label','total','resolved'],showSummary:true,showChart:true,showTable:false}};
+ const model=await call('report-models','POST',{name:'Modelo pessoal',definition:modelDefinition},admin);assert.equal(model.status,201);
+ const saved=(await call('report-models','GET',undefined,admin)).data.find(m=>m.id===model.data.id);assert.equal(saved.definition.view.title,'Demonstração externa');assert.equal(saved.definition.view.metric,'resolved');assert.equal(saved.definition.filters.serviceType,'Externo');
+ assert.equal((await call('report-models','GET',undefined,restricted)).data.length,0);assert.equal((await call('report-models/'+model.data.id,'DELETE',undefined,restricted)).status,404);
+ assert.equal((await call('report-models','POST',{name:'Sem permissão',definition:modelDefinition},restricted)).status,403);
+ assert.equal((await call('report-models','POST',{name:'Modelo pessoal',definition:modelDefinition},admin)).status,409);
+ for(const invalid of [{...modelDefinition,filters:{from:'2026-02-29'}},{...modelDefinition,view:{...modelDefinition.view,limit:999}},{...modelDefinition,view:{...modelDefinition.view,columns:['password']}},{...modelDefinition,view:{showSummary:false,showChart:false,showTable:false}}])assert.equal((await call('report-models','POST',{name:'Inválido',definition:invalid},admin)).status,400);
+ assert.equal((await call('report-models')).status,401);
+ assert.equal((await call('report-models/'+model.data.id,'DELETE',undefined,admin)).status,200);assert.equal((await call('report-models','GET',undefined,admin)).data.length,0);
  assert.equal((await call('reports')).status,401);
  }finally{db?.close();child.kill();await once(child,'exit');rmSync(dir,{recursive:true,force:true});}
 });

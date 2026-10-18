@@ -1,3 +1,4 @@
+import {createReportModels} from './report-models.mjs';
 import {createReports} from './reports.mjs';
 import {createClients} from './clients.mjs';
 import {createTelemetry} from './telemetry.mjs';
@@ -26,6 +27,7 @@ async function body(req){const chunks=[];let size=0;for await(const chunk of req
 const str=(v,max=500)=>typeof v==='string'?v.trim().slice(0,max):'';
 const config=createConfiguration({db,json,body,check,root});
 const clients=createClients({db,body,json,config,check});
+const reportModels=createReportModels({db,body,json,config});
 const reports=createReports({db,json,config});
 const telemetry=createTelemetry({db,body,json,config,root,clients});
 http.createServer(async(req,res)=>{try{
@@ -56,6 +58,7 @@ db.prepare('UPDATE users SET password=? WHERE id=?').run(hash(b.password),sessio
 db.prepare('DELETE FROM sessions WHERE user_id=?').run(session.id);
 config.audit(session,'users.password','Própria senha alterada');return json(res,200,{ok:true,reauthenticate:true});
 }
+if(await reportModels.handle(req,res,path,session))return;
 if(await reports.handle(req,res,path,session))return;
 if(await clients.handle(req,res,path,session))return;
 if(await telemetry.handle(req,res,path,session))return;

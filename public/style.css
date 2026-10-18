@@ -321,3 +321,24 @@ button:disabled { cursor: default; opacity: .6; }
 .report-pie-legend b { font-weight: 600; font-size: 11px; }
 @media(max-width:650px) { .report-pie-layout { grid-template-columns: minmax(0,1fr); gap: 16px; } .report-pie-svg { max-width: 260px; margin: auto; } }
 @media print { .report-chart-choice { display: none; } .report-pie-layout { break-inside: avoid; } .report-pie-legend span { color: #333; } .report-pie svg { print-color-adjust: exact; } }
+.report-models { margin: 0 0 22px; }
+.report-model-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.report-model-toolbar > div { flex: 1; min-width: 190px; }
+.report-model-toolbar label { margin-top: 0; }
+.report-periods { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 6px; }
+.report-periods span { font-size: 11px; color: var(--muted); }
+.report-periods button { margin: 0; padding: 7px 10px; font-size: 11px; }
+.report-customization { border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin: 22px 0; }
+.report-customization fieldset { border: 1px solid var(--border); border-radius: 7px; margin: 22px 0; padding: 12px 16px; }
+.report-customization legend { font-size: 12px; color: var(--muted); padding: 0 7px; }
+.report-checks { display: flex; flex-wrap: wrap; gap: 12px 24px; }
+.report-checks label { margin: 5px 0; }
+.report-note { white-space: pre-wrap; overflow-wrap: anywhere; padding: 16px; border-left: 2px solid var(--cyan); background: #112737; }
+.report-model-save { padding: 0 0 20px; border-bottom: 1px solid var(--border); }
+.report-model-save > div { display: flex; gap: 12px; align-items: center; }
+.report-model-save input { max-width: 480px; }
+.report-model-save button { margin: 0; flex-shrink: 0; }
+.report-model-save small { display: block; margin-top: 10px; color: var(--muted); font-size: 11px; }
+.report-indicator-caption { font-size: 12px; color: var(--cyan); margin: 18px 0; }
+@media(max-width:540px) { .report-model-save > div { align-items: stretch; flex-direction: column; } .report-customization { padding: 14px; } }
+@media print { .report-models,.report-customization,.report-model-save { display: none !important; } .report-note { background: #f0f6fa; } .report-indicator-caption { color: #333; } }

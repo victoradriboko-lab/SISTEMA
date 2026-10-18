@@ -220,3 +220,22 @@ A migração preserva os registros e deixa os antigos como **Não informado**, s
 Após gerar um relatório com dados, escolha **Visualização do gráfico → Barras** ou **Disco (pizza)** no resultado. A troca é imediata, usa os mesmos dados já filtrados e mantém a tabela e a exportação CSV. A escolha é preservada ao gerar novamente ou trocar de relatório durante a sessão da página. A impressão/PDF inclui o gráfico escolhido com sua legenda.
 
 Barras mostram até doze grupos na ordem do relatório. O disco mostra quantidades e percentuais; quando houver mais de doze grupos, os onze maiores aparecem individualmente e os demais são reunidos em **Outros grupos (agrupados)**, preservando o total. A tabela e o CSV continuam completos. Resultados vazios não geram gráfico.
+
+#### Personalização e modelos pessoais
+
+Depois de gerar o relatório, abra **Personalizar relatório** para definir:
+
+- Título e observação para apresentação/PDF.
+- Colunas visíveis na tabela e na exportação CSV; a coluna de identificação do grupo permanece visível.
+- Ordenação crescente/decrescente por nome, total ou outra coluna disponível.
+- Indicador do gráfico, como total, abertos, em atendimento, resolvidos ou agentes online, conforme o relatório e as permissões.
+- Máximo de 5, 10 ou 12 grupos no gráfico.
+- Blocos que aparecem na apresentação: resumo, gráfico e tabela. Ao menos um deve permanecer selecionado.
+
+Clique em **Aplicar personalização** para atualizar a apresentação usando os dados já consultados. O resumo conserva o total de registros filtrados; o gráfico informa separadamente o indicador selecionado. No disco, as participações são calculadas sobre esse indicador; no gráfico de barras, a ordenação acompanha as linhas. As colunas ocultas não são incluídas no CSV, mas a escolha visual não substitui as permissões de acesso. **Restaurar apresentação padrão** desfaz essas escolhas.
+
+Use os atalhos **Mês atual**, **Mês anterior**, **Últimos 30 dias**, **Ano atual** ou **Todos** para preencher o período; clique em **Gerar relatório** para consultar os dados com o novo filtro.
+
+Em **Salvar filtros e apresentação como modelo pessoal**, informe um nome. O modelo guarda o tipo de relatório, os filtros do resultado gerado e a apresentação já aplicada. Suas datas ficam fixas; ajuste o período ao reutilizar, quando necessário. Em **Meus modelos de relatório**, carregue ou exclua um modelo. Ao carregar, os resultados são consultados novamente, e as permissões atuais continuam valendo. Modelos não armazenam cópias dos dados.
+
+Os modelos ficam no banco de dados, vinculados ao usuário, e continuam disponíveis após recarregar a página ou acessar de outro computador. Cada usuário vê apenas os próprios modelos e os tipos que pode consultar. Há um limite de cinquenta modelos por usuário; para alterar um modelo existente, salve com outro nome ou exclua a versão anterior. A migração apenas acrescenta a tabela de modelos e preserva os dados existentes.

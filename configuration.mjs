@@ -180,7 +180,7 @@ export function createConfiguration({db,json,body,check,root}){
     if(/^\/api\/assets\/\d+\/token$/.test(path)&&req.method==='POST'){
       requirePermission(user,'assets.write');const b=await body(req);confirmPassword(user,b.password);const id=Number(path.split('/')[3]);
       if(!db.prepare('SELECT id FROM assets WHERE id=?').get(id))throw error('Equipamento não encontrado',404);
-      const token=randomBytes(32).toString('hex');db.prepare('UPDATE assets SET token=?,last_seen=NULL,metrics=NULL WHERE id=?').run(token,id);audit(user,'assets.token',`Token do agente renovado no equipamento #${id}`);json(res,200,{token});return true;
+      const token=randomBytes(32).toString('hex');db.prepare('UPDATE assets SET token=?,last_seen=NULL,metrics=NULL,machine_id=NULL,agent_info=NULL,last_metrics_at=NULL,inventory=NULL,last_inventory_at=NULL WHERE id=?').run(token,id);audit(user,'assets.token',`Token do agente renovado no equipamento #${id}`);json(res,200,{token});return true;
     }
     return false;
   }

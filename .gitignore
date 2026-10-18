@@ -4,3 +4,5 @@ node_modules/
 
 __pycache__/
 *.pyc
+agents/windows/**/bin/
+agents/windows/**/obj/

@@ -1,11 +1,11 @@
 {
   "name": "sistema-ti",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check configuration.mjs && node --check public/app.js && node --check public/settings.js",
+    "check": "node --check server.mjs && node --check configuration.mjs && node --check public/app.js && node --check public/settings.js && node --check telemetry.mjs && node --check public/monitor.js",
     "test": "node --test"
   },
   "engines": {

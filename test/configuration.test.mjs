@@ -90,7 +90,7 @@ test('configurações persistem, permissões bloqueiam API, importação é repe
  const restoredLogin=await fetch('http://127.0.0.1:3204/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'admin@example.test',password})});assert.equal(restoredLogin.status,200);
  const restoredCookie=restoredLogin.headers.get('set-cookie').split(';')[0];const restoredAssets=await fetch('http://127.0.0.1:3204/api/assets',{headers:{Cookie:restoredCookie}});assert.equal((await restoredAssets.json()).length,2);
  }finally{if(restored.exitCode===null){restored.kill();await once(restored,'exit');}rmSync(restoreDir,{recursive:true,force:true});}
- assert.equal((await call('config/system','GET',undefined,admin)).data.version,'0.2.0');
+ assert.equal((await call('config/system','GET',undefined,admin)).data.version,'0.3.0');
  await stop();await start();admin=await login('admin@example.test');
  assert.equal((await call('config/company','GET',undefined,admin)).data.name,'Empresa de Teste');
  assert.deepEqual((await call('config/permissions','GET',undefined,admin)).data.roles.find(r=>r.id==='technician').permissions,['tickets.read']);

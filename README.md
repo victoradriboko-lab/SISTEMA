@@ -29,7 +29,7 @@ Cadastre um equipamento e guarde seu token. Em um terminal da máquina Linux a m
 
 ## Próximas etapas
 
-Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está sinalizado como pendente na interface: será necessário selecionar e instalar RustDesk ou MeshCentral, configurar servidor, clientes, autorização e auditoria. Também faltam agentes Windows/macOS, SLA contratado, anexos, integração de e-mail, recuperação de senha por e-mail, limitação de tentativas de login e alertas automáticos por e-mail. Antes de uso amplo, concluir os controles necessários ao seu ambiente e revisar a segurança e a rotina de backup. O cadastro inicial é destinado apenas ao primeiro administrador. Administradores podem redefinir senhas de outros usuários; a própria senha exige confirmação da senha atual.
+Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está sinalizado como pendente na interface: será necessário selecionar e instalar RustDesk ou MeshCentral, configurar servidor, clientes, autorização e auditoria. Também faltam agente macOS, SLA contratado, anexos, integração de e-mail, recuperação de senha por e-mail, limitação de tentativas de login e alertas automáticos por e-mail. O agente Windows precisa de validação piloto no Windows antes de distribuição ampla. Antes de uso amplo, concluir os controles necessários ao seu ambiente e revisar a segurança e a rotina de backup. O cadastro inicial é destinado apenas ao primeiro administrador. Administradores podem redefinir senhas de outros usuários; a própria senha exige confirmação da senha atual.
 
 ## Validação
 
@@ -112,3 +112,35 @@ TI-002;Servidor de arquivos;Infraestrutura;Linux
 Para recuperar apenas um backup baixado nesta versão: pare a tarefa, preserve uma cópia da pasta `data` atual, separe os antigos arquivos `sistema.db`, `sistema.db-wal` e `sistema.db-shm` em outro local, copie o arquivo baixado como `data/sistema.db` e inicie a tarefa. Não misture arquivos WAL/SHM antigos com um banco restaurado. Os usuários precisam fazer login novamente. Essa recuperação substitui o estado do banco pelo momento do backup.
 
 Para retornar a uma versão anterior do código, mantenha a aplicação parada e restaure **o código e o banco correspondentes ao mesmo backup anterior à atualização**. Não execute código antigo com os novos perfis personalizados: versões antigas não conhecem a nova matriz de permissões. A recuperação perde alterações posteriores ao backup; preserve o estado atual antes de qualquer retorno. Não há botão de reversão automática ou exclusão de dados nesta atualização.
+
+
+## Agente Windows / Windows Server — versão do sistema 0.3.0
+
+O pacote atende Windows 10/11 e Windows Server 2016 ou superior (.NET Framework 4.6.2+, PowerShell 5.1). O agente é um serviço nativo `ServitecAgent`; a máquina monitorada não precisa de Node.js ou Python.
+
+1. Atualize o **servidor**: pare `Servitec-Sistema`, preserve uma cópia de `data`, faça Pull de todos os arquivos e inicie a tarefa. A migração cria o histórico de telemetria e preserva usuários, equipamentos e dados anteriores.
+2. Em **Equipamentos**, cadastre cada máquina (ou use um cadastro existente), gere/renove seu token e clique em **Baixar agente Windows**. É necessário ter permissão para cadastrar equipamentos.
+3. Na máquina a monitorar, extraia TODO o ZIP e execute **instalar-agente.bat como administrador**. Informe a URL base do servidor e cole o token na entrada oculta. Use token exclusivo para cada equipamento.
+4. Confira **Monitoramento → Detalhes**. A primeira coleta pode levar alguns minutos. O serviço inicia após reiniciar o Windows, sem precisar entrar em uma conta de usuário.
+
+Métricas são coletadas a cada 30 segundos; inventário e serviços automáticos, no início e a cada seis horas. A página consulta o servidor a cada 10 segundos, sem substituir formulários abertos. Offline após dois minutos sem amostra atual; uso de CPU/RAM/disco de 90% ou mais fica em destaque. Os valores exibidos são as últimas amostras recebidas, e ficam identificados como offline quando a comunicação para.
+
+O histórico mantém até 48 horas, com limpeza periódica e aproximadamente 5.760 amostras por equipamento; a tela detalhada mostra as últimas 120. Amostras têm identificador e horário de coleta: reenvios não duplicam o histórico, e backlog antigo não substitui métricas atuais nem simula conexão online. O token fica vinculado à identidade local do agente. Agentes Linux anteriores continuam aceitos nos equipamentos ainda não vinculados a uma instalação Windows.
+
+O agente só faz conexões de saída e valida certificados HTTPS normalmente. O instalador não segue redirecionamentos levando o token. Para a rede local, permite HTTP apenas por IP privado ou loopback e com confirmação explícita; não use esse modo pela internet. Token protegido por DPAPI, pastas restritas a administradores/SYSTEM, fila limitada a 120 amostras e log com rotação. Não há acesso remoto à tela, execução de comandos ou atualização remota de executáveis.
+
+[Manual do agente, requisitos e diagnóstico](agents/windows/README.md).
+
+### Compilar novamente o agente (desenvolvimento)
+
+Requer SDK .NET 8 e acesso ao NuGet para assemblies de referência do .NET Framework; isso só é necessário na máquina de desenvolvimento. Python 3 é usado apenas para gerar o ZIP.
+
+```sh
+dotnet build agents/windows/ServitecAgent.csproj -c Release
+dotnet run --project agents/windows/tests/PolicyTests.csproj -c Release
+python3 scripts/package-agent.py agents/windows/bin/Release/net462/ServitecAgent.exe
+```
+
+O ZIP versionado inclui o executável compilado, seu checksum SHA-256, configuração de runtime, instaladores e fontes. Após qualquer alteração de C# ou instaladores, recompile e gere o pacote antes de distribuir. O checksum confirma integridade, não assinatura/autenticidade; ainda não há assinatura digital de código.
+
+**Validação feita nesta entrega:** compilação do executável para .NET Framework 4.6.2 sem erros/avisos; 18 verificações da política de conexão compartilhada com o agente; sintaxe dos instaladores conferida com o parser PowerShell; testes da API/protocolo, permissão, tokens, amostras atrasadas/duplicadas e compatibilidade do agente antigo; navegação, download, histórico e atualização automática no navegador e layout móvel com telemetria simulada. **Validação ainda necessária no Windows:** instalação e reinício do serviço, DPAPI/ACL, coleta WMI/Registro e envio de dados reais numa estação e num Windows Server. Os testes em Linux não substituem esse piloto.

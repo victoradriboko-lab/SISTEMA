@@ -114,3 +114,36 @@ por hora por dispositivo. Sem rede, o aplicativo informa a falha e permite repet
 Atualize primeiro a plataforma e depois execute novamente o novo instalador nos PCs.
 Na instalação, ENTER inclui o aplicativo; N instala somente o monitoramento. O piloto
 nativo no Windows ainda é necessário; os testes de API e compilação foram executados.
+
+## Menus compactos e abas · atualização 0.4.4
+
+O Dashboard fica direto no menu. Os demais módulos estão nos submenus:
+
+| Grupo | Opções |
+| --- | --- |
+| Atendimento | Chamados, Central de e-mails |
+| Clientes | Empresas e contratos, Acessos de clientes |
+| Infraestrutura | Equipamentos, Monitoramento, Alertas, Acesso remoto |
+| Gestão | Relatórios, Rentabilidade, Preventivas |
+| Administração | Usuários e permissões, Cofre, Segurança da conta, Configurações |
+
+Clique no grupo para expandir ou recolher. Ao navegar, o grupo do módulo ativo
+abre automaticamente. Opções sem permissão ficam ocultas. O menu permanece no
+alto e se adapta ao celular.
+
+Na ficha da empresa, use **Dados da empresa**, **Unidades e documentação**,
+**Contrato e equipamentos** e **SLA e atendimento**. Trocar de aba preserva os valores
+em edição. **Salvar todas as alterações** salva as quatro abas em conjunto e mantém
+a aba selecionada. Os detalhes de chamados e equipamentos ficam recolhidos no resumo.
+
+No detalhe interno de um chamado, use **Histórico**, **Mensagens e notas**, **Anexos**
+e **Horas e despesas**. Cada formulário mantém seu botão de salvar. Salvar um deles
+não apaga os campos dos outros ainda não enviados. As abas disponíveis respeitam
+as permissões do operador. A navegação por teclado aceita setas, Home e End.
+
+Em Configurações, alternar entre abas preserva os formulários já carregados e os
+arquivos selecionados. Salvar uma seção não descarta o preenchimento das demais.
+Não há salvamento automático nem armazenamento persistente desses rascunhos:
+salve antes de sair do módulo, sair da conta ou recarregar o navegador.
+
+Atualize a plataforma para 0.4.4 e recarregue a página para receber o novo menu.

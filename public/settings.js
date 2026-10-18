@@ -9,22 +9,30 @@ export function createSettings({api,notify,onCompany,onRoles,onUsers}){
   function available(){return [['permissions','Permissões','permissions.manage'],['rules','Atendimento','rules.manage'],['company','Empresa','company.manage'],['imports','Importações','imports.manage'],['activity','Atividades','audit.read'],['mail','E-mail','system.manage'],['backups','Backups','system.manage'],['system','Sistema','system.manage']].filter(([, ,p])=>has(p));}
   function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function bindForm(id,action){host.querySelector(id).onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{await action(e);}catch(error){notify(error.message,'error');}finally{button.disabled=false;}};}
-  async function show(element,me){host=element;user=me;const tabs=available();if(!tabs.some(([key])=>key===section))section=tabs[0]?.[0];if(!section){host.textContent='Nenhuma configuração disponível para seu perfil.';return;}
-    const id=++sequence;host.innerHTML=`<nav class="settings-tabs" aria-label="Configurações">${has('users.manage')?'<button id="settings-users">Usuários</button>':''}${tabs.map(([key,label])=>`<button data-section="${key}" class="${key===section?'active':''}" ${key===section?'aria-current="page"':''}>${label}</button>`).join('')}</nav><div class="settings-body" aria-live="polite">Carregando…</div>`;
-    host.querySelector('#settings-users')?.addEventListener('click',onUsers);
-    host.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>{section=b.dataset.section;notify('');show(host,user);});
+  function currentBody(){return host.querySelector(`[data-settings-pane="${section}"]`);}
+  async function show(element,me,refresh=true){
+    const reuse=host===element&&user?.id===me.id&&element.isConnected&&element.querySelector('[data-settings-pane]');host=element;user=me;const tabs=available();if(!tabs.some(([key])=>key===section))section=tabs[0]?.[0];if(!section){host.textContent='Nenhuma configuração disponível para seu perfil.';return;}
+    const id=++sequence;
+    if(!reuse){host.innerHTML=`<nav class="settings-tabs" aria-label="Configurações">${has('users.manage')?'<button id="settings-users">Usuários</button>':''}${tabs.map(([key,label])=>`<button data-section="${key}">${label}</button>`).join('')}</nav>${tabs.map(([key])=>`<div class="settings-body" data-settings-pane="${key}" hidden></div>`).join('')}`;
+      host.querySelector('#settings-users')?.addEventListener('click',onUsers);
+      host.querySelectorAll('[data-section]').forEach(button=>button.onclick=()=>{section=button.dataset.section;notify('');show(host,user,false);});
+    }
+    host.querySelectorAll('[data-section]').forEach(button=>{const selected=button.dataset.section===section;button.classList.toggle('active',selected);if(selected)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});
+    host.querySelectorAll('[data-settings-pane]').forEach(pane=>pane.hidden=pane.dataset.settingsPane!==section);
+    const pane=currentBody();if(!refresh&&pane.dataset.loaded==='true')return;pane.textContent='Carregando…';
     try{
       if(section==='permissions')await permissions(id);
       if(section==='rules')await rules(id);
       if(section==='company')await company(id);
       if(section==='imports')imports();
       if(section==='activity')await activity(id);
-      if(section==='mail')await showMailSettings(host.querySelector('.settings-body'),{api,notify});
-      if(section==='backups')await showBackupSettings(host.querySelector('.settings-body'),{api,notify});
+      if(section==='mail')await showMailSettings(pane,{api,notify});
+      if(section==='backups')await showBackupSettings(pane,{api,notify});
       if(section==='system')await system(id);
-    }catch(error){if(id===sequence){host.querySelector('.settings-body').textContent=error.message;notify(error.message,'error');}}
+      if(id===sequence)pane.dataset.loaded='true';
+    }catch(error){if(id===sequence){pane.textContent=error.message;notify(error.message,'error');}}
   }
-  function target(id,html){if(id!==sequence)return false;host.querySelector('.settings-body').innerHTML=html;return true;}
+  function target(id,html){if(id!==sequence)return false;currentBody().innerHTML=html;return true;}
   async function permissions(id){
     const data=await api('config/permissions');
     if(!target(id,`<div class="panel"><h2>Perfis e permissões</h2><p>Marque o que cada perfil pode fazer e salve. As permissões de administração são fixas. A alteração encerra as sessões dos perfis editados.</p><details><summary>Criar novo perfil</summary><form id="new-role" class="inline-form"><label for="role-name">Nome do perfil</label><input id="role-name" name="name" maxlength="80" required><button class="primary">Criar perfil</button></form></details></div><form id="permissions-form"><div class="panel matrix-panel"><table class="permission-matrix"><thead><tr><th>Permissão</th>${data.roles.map(r=>`<th>${escape(r.name)}<small>${r.users} usuário(s)</small></th>`).join('')}</tr></thead><tbody>${data.catalog.map(p=>`<tr><th scope="row">${escape(p.label)}${p.locked?' <span title="Exclusiva do administrador">🔒</span>':''}<small>${escape(p.group)}</small></th>${data.roles.map(r=>`<td><input class="permission-check" type="checkbox" aria-label="${escape(p.label)} — ${escape(r.name)}" data-role="${r.id}" data-permission="${p.key}" ${r.permissions.includes(p.key)?'checked':''} ${r.id==='admin'||p.locked?'disabled':''}></td>`).join('')}</tr>`).join('')}</tbody></table></div><button class="primary settings-save">Salvar permissões</button></form>`))return;
@@ -57,7 +65,7 @@ export function createSettings({api,notify,onCompany,onRoles,onUsers}){
     });
   }
   function imports(){
-    host.querySelector('.settings-body').innerHTML=`<div class="panel"><h2>Importar equipamentos</h2><p>Selecione um CSV UTF-8 com cabeçalhos <code>codigo;nome;responsavel;sistema</code>. Código e nome são obrigatórios. Códigos existentes são atualizados; o mesmo arquivo não duplica equipamentos. Os registros antigos sem código são preservados.</p><p>Até 1.000 equipamentos e 512 KB por arquivo. Revise a prévia antes de confirmar. Campos opcionais ausentes mantêm os valores existentes; campos vazios no CSV limpam esses valores.</p><button id="csv-template">Baixar modelo CSV</button><form id="csv-form"><label for="csv-file">Arquivo CSV</label><input id="csv-file" type="file" accept=".csv,text/csv" required><button class="primary">Visualizar importação</button></form></div><div id="import-preview"></div>`;
+    currentBody().innerHTML=`<div class="panel"><h2>Importar equipamentos</h2><p>Selecione um CSV UTF-8 com cabeçalhos <code>codigo;nome;responsavel;sistema</code>. Código e nome são obrigatórios. Códigos existentes são atualizados; o mesmo arquivo não duplica equipamentos. Os registros antigos sem código são preservados.</p><p>Até 1.000 equipamentos e 512 KB por arquivo. Revise a prévia antes de confirmar. Campos opcionais ausentes mantêm os valores existentes; campos vazios no CSV limpam esses valores.</p><button id="csv-template">Baixar modelo CSV</button><form id="csv-form"><label for="csv-file">Arquivo CSV</label><input id="csv-file" type="file" accept=".csv,text/csv" required><button class="primary">Visualizar importação</button></form></div><div id="import-preview"></div>`;
     host.querySelector('#csv-template').onclick=()=>download(new Blob(['\uFEFFcodigo;nome;responsavel;sistema\r\nTI-001;Computador recepção;Equipe TI;Windows 11\r\n'],{type:'text/csv;charset=utf-8'}),'modelo-equipamentos.csv');
     let csv='';host.querySelector('#csv-file').onchange=()=>{csv='';host.querySelector('#import-preview').innerHTML='';};
     bindForm('#csv-form',async()=>{

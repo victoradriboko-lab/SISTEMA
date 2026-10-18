@@ -114,3 +114,41 @@ button.theme-toggle,.customer-actions button.theme-toggle{display:inline-flex;al
 @media (max-width:600px) { #service-content fieldset { grid-template-columns: minmax(0,1fr); } }
 
 #service-content fieldset > .billing-wide { grid-column: 1 / -1; }
+/* Navegação agrupada e áreas de trabalho por abas. */
+#sidebar-nav { gap: 5px; }
+#sidebar-nav .nav-group { min-width: 0; }
+#sidebar-nav [data-nav-group] { width: 100%; justify-content: space-between; min-height: 43px; padding: 12px 14px; font-weight: 600; }
+#sidebar-nav [data-nav-group] > span { transition: transform .15s; }
+#sidebar-nav [data-nav-group][aria-expanded=true] > span { transform: rotate(180deg); }
+#sidebar-nav .nav-submenu { display: grid; gap: 3px; margin: 2px 0 8px 10px; border-left: 1px solid var(--border); padding-left: 7px; }
+#sidebar-nav .nav-submenu button { width: 100%; font-size: 12px; padding: 10px; min-height: 36px; gap: 8px; }
+#sidebar-nav .nav-submenu svg { width: 18px; height: 18px; }
+.workspace-tabs { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+.workspace-tabs button { border-radius: 7px; padding: 10px 13px; }
+.workspace-tabs button[aria-selected=true] { border-color: var(--cyan); box-shadow: inset 0 -2px var(--cyan); font-weight: 700; }
+#service-content fieldset { display: block; }
+#service-content .company-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px 20px; }
+#service-content .company-fields > h2, #service-content .company-fields > p, #service-content .company-fields > label:has(textarea), #service-content .company-fields > label:has(input[type=checkbox]) { grid-column: 1 / -1; }
+.workspace-savebar { position: sticky; bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 24px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel, #101c2d); box-shadow: 0 6px 22px #0002; z-index: 1; }
+.workspace-draft { font-size: 12px; color: var(--muted); }
+.ticket-workspace > .workspace-pane { margin-top: 0; }
+#service-content .workspace-pane[hidden], .workspace-pane[hidden] { display: none !important; }
+@media(max-width:760px) {
+ #sidebar-nav { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); overflow-x: hidden; gap: 4px; margin-top: 12px; }
+ #sidebar-nav > [data-page=dashboard], #sidebar-nav .nav-group[data-open=true] { grid-column: 1 / -1; }
+ #sidebar-nav .nav-submenu { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ #sidebar-nav [data-nav-group] { min-height: 35px; padding: 8px 10px; }
+ #sidebar-nav button { white-space: normal; }
+}
+@media(max-width:600px) { #service-content .company-fields { grid-template-columns: minmax(0,1fr); } .workspace-tabs { gap: 5px; } .workspace-tabs button { flex: 1 1 42%; padding: 10px; font-size: 12px; } }
+
+html[data-theme=light] .workspace-savebar { background: #fff; }
+.company-overview { margin-top: 12px; }
+.company-overview summary { cursor: pointer; color: var(--muted); }
+#service-content .company-fields > label:has([name=contractName]),
+#service-content .company-fields > label:has([name=billingModel]),
+#service-content .company-fields > label:has([name=monthly]) { grid-column: 1 / -1; }
+#service-content [name=monthly][readonly] { font-weight: 700; }
+#service-content .company-fields > label { margin: 0; }
+#service-content .company-fields > label > input, #service-content .company-fields > label > select, #service-content .company-fields > label > textarea { margin-top: 6px; }
+#service-content .company-fields > p { margin: 0; line-height: 1.6; }

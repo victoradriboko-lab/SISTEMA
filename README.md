@@ -341,3 +341,9 @@ sem login, autorizado pela empresa configurada durante a instalação. A credenc
 aplicativo permite somente enviar solicitações daquela empresa. O portal continua
 exigindo conta para consultas. Atualize o servidor e reinstale o novo agente nos PCs.
 Veja o [guia do aplicativo](agents/windows/README.md#aplicativo-de-atendimento-sem-login-e-atalhos--versão-043).
+
+Na versão 0.4.4, o menu lateral agrupa os módulos em submenus recolhíveis:
+Atendimento, Clientes, Infraestrutura, Gestão e Administração. A ficha de empresas
+usa abas de dados, documentação, contrato e SLA, com salvamento conjunto. Os detalhes
+dos chamados separam histórico, mensagens, anexos e horas. Alternar abas preserva os
+campos em edição; sair do módulo ou recarregar a página ainda exige salvar antes.

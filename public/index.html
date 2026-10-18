@@ -10,7 +10,7 @@
 <body>
   <aside aria-label="Menu principal">
     <div class="brand" aria-label="Servitec, central de TI">
-      <span class="brand-mark" aria-hidden="true">S</span>
+      <img id="brand-logo" class="brand-logo" alt="Logotipo da empresa" hidden><span class="brand-mark" aria-hidden="true">S</span>
       <div><span class="brand-name">servitec</span><span class="brand-caption">CENTRAL DE TI</span></div>
     </div>
     <p class="nav-label">GESTÃO E TECNOLOGIA</p>
@@ -21,6 +21,7 @@
       <button data-page="monitor"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-7 6 14 3-7h4"/></svg> Monitoramento</button>
       <button data-page="remote"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg> Acesso remoto</button>
       <button data-page="users" hidden><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3"/></svg> Usuários e permissões</button>
+      <button data-page="settings" hidden><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg> Configurações</button>
     </nav>
     <footer><span class="footer-dot" aria-hidden="true"></span> Tecnologia que move<br><small>o seu negócio.</small></footer>
   </aside>
@@ -29,6 +30,6 @@
     <div id="notice" role="status" aria-live="polite"></div>
     <section id="content" aria-label="Conteúdo principal"></section>
   </main>
-  <script src="/app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

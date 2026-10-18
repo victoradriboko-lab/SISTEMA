@@ -69,13 +69,15 @@ test('migração preserva login e dados antigos e pode ser repetida',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'sistema-migrate-'));const password='legacy-password-123';
  const db=new DatabaseSync(join(dir,'sistema.db'));const salt='legacy-test-salt';
  db.exec('CREATE TABLE users(id INTEGER PRIMARY KEY,name TEXT,email TEXT UNIQUE,password TEXT)');
- db.prepare('INSERT INTO users VALUES(1,?,?,?)').run('Administrador existente','legacy@example.test',salt+':'+scryptSync(password,salt,64).toString('hex'));db.exec("CREATE TABLE tickets(id INTEGER PRIMARY KEY,title TEXT,description TEXT,priority TEXT,status TEXT DEFAULT 'Aberto',created TEXT DEFAULT CURRENT_TIMESTAMP); INSERT INTO tickets(title,description,priority) VALUES('Chamado anterior','Preservar dados','Alta')");db.close();
+ db.prepare('INSERT INTO users VALUES(1,?,?,?)').run('Administrador existente','legacy@example.test',salt+':'+scryptSync(password,salt,64).toString('hex'));db.exec("CREATE TABLE tickets(id INTEGER PRIMARY KEY,title TEXT,description TEXT,priority TEXT,status TEXT DEFAULT 'Aberto',created TEXT DEFAULT CURRENT_TIMESTAMP); INSERT INTO tickets(title,description,priority) VALUES('Chamado anterior','Preservar dados','Alta')");db.exec("CREATE TABLE assets(id INTEGER PRIMARY KEY,name TEXT,owner TEXT,os TEXT,token TEXT UNIQUE,last_seen TEXT,metrics TEXT); INSERT INTO assets(name,owner,os,token) VALUES('Equipamento antigo','Equipe','Linux','legacy-agent-token')");db.close();
  try {for(let run=0;run<2;run++){
  const app=await start(dir,3202);
  try {const login=await app.request('login','POST',{email:'legacy@example.test',password});assert.equal(login.status,200);
  const me=await app.request('me','GET',null,login.cookie);assert.equal(me.data.role,'admin');assert.equal(me.data.name,'Administrador existente');
  const users=await app.request('users','GET',null,login.cookie);assert.equal(users.data.length,1);assert.equal(users.data[0].active,1);
- const tickets=await app.request('tickets','GET',null,login.cookie);assert.equal(tickets.data[0].title,'Chamado anterior');
+ const tickets=await app.request('tickets','GET',null,login.cookie);assert.equal(tickets.data[0].title,'Chamado anterior');assert.ok(tickets.data[0].status_since);
+ const assets=await app.request('assets','GET',null,login.cookie);assert.equal(assets.data[0].name,'Equipamento antigo');assert.equal(assets.data[0].code,null);
+ const heartbeat=await fetch('http://127.0.0.1:3202/api/heartbeat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer legacy-agent-token'},body:'{"os":"Linux"}'});assert.equal(heartbeat.status,200);
  }finally{await app.stop();}
  }}finally{rmSync(dir,{recursive:true,force:true});}
 });

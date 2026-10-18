@@ -17,7 +17,8 @@ O servidor escuta em 127.0.0.1:3000. A primeira abertura solicita cadastro do ad
 
 - Cadastro inicial de administrador, login com hash scrypt, sessão de oito horas e logout.
 - Usuários e permissões: cadastro, edição, desativação e redefinição de senha por administrador; troca da própria senha para todos os perfis.
-- Perfis Administrador, Técnico e Consulta, com autorização verificada no servidor e revogação de sessões após mudanças de senha, perfil ou situação.
+- Perfis Administrador, Técnico e Consulta como padrões; novos perfis e permissões configuráveis por operação, verificadas no servidor. Alterações de permissões encerram as sessões dos perfis afetados.
+- Configurações de empresa/logotipo, alertas de chamados parados, importação de equipamentos CSV com prévia, histórico de atividades e backup consistente do banco.
 - Chamados: criação, descrição, prioridade e transição de status.
 - Inventário com responsável e sistema operacional.
 - Token exclusivo por equipamento, exibido no cadastro.
@@ -28,11 +29,11 @@ Cadastre um equipamento e guarde seu token. Em um terminal da máquina Linux a m
 
 ## Próximas etapas
 
-Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está sinalizado como pendente na interface: será necessário selecionar e instalar RustDesk ou MeshCentral, configurar servidor, clientes, autorização e auditoria. Também faltam agentes Windows/macOS, alertas, SLA, anexos, e-mail, recuperação de senha por e-mail, limitação de tentativas de login, revogação/rotação de tokens e trilha de auditoria. Antes de uso amplo, concluir esses controles e revisar a segurança e o backup. O cadastro inicial é destinado apenas ao primeiro administrador. Administradores podem redefinir senhas de outros usuários; a própria senha exige confirmação da senha atual.
+Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está sinalizado como pendente na interface: será necessário selecionar e instalar RustDesk ou MeshCentral, configurar servidor, clientes, autorização e auditoria. Também faltam agentes Windows/macOS, SLA contratado, anexos, integração de e-mail, recuperação de senha por e-mail, limitação de tentativas de login e alertas automáticos por e-mail. Antes de uso amplo, concluir os controles necessários ao seu ambiente e revisar a segurança e a rotina de backup. O cadastro inicial é destinado apenas ao primeiro administrador. Administradores podem redefinir senhas de outros usuários; a própria senha exige confirmação da senha atual.
 
 ## Validação
 
-`npm test` inicia uma instância isolada com banco temporário e testa cadastro, bloqueio de recadastro, login, rejeição de acesso sem autenticação, criação e alteração de chamados, proteção de origem, inventário, heartbeat e logout. Não valida interface em navegador ou acesso remoto. `npm run check` verifica a sintaxe do servidor.
+`npm test` inicia uma instância isolada com banco temporário e testa cadastro, bloqueio de recadastro, login, rejeição de acesso sem autenticação, criação e alteração de chamados, proteção de origem, inventário, heartbeat e logout. Não valida interface em navegador ou acesso remoto. `npm run check` verifica a sintaxe do servidor e dos scripts da interface. Os testes também verificam configurações, regras de atendimento, importação CSV, autorização por operação e abertura de uma nova instância com o backup baixado.
 
 ## Windows Server: inicio automatico na rede local
 
@@ -60,7 +61,7 @@ Remove-NetFirewallRule -Name 'Servitec-Sistema-LAN-3000'
 ```
 
 
-## Usuários, senhas e permissões
+## Usuários, senhas e permissões padrão
 
 Entre como administrador e abra **Usuários e permissões**. Use **Novo usuário** para definir nome, e-mail de login, senha inicial (12 a 256 caracteres) e perfil. Em **Editar**, altere cadastro, perfil, situação ou defina nova senha para outro usuário. A senha existente nunca é exibida. Deixar a nova senha vazia mantém a anterior. Não há exclusão definitiva: desative a conta para bloquear acesso.
 
@@ -71,8 +72,43 @@ Entre como administrador e abra **Usuários e permissões**. Use **Novo usuário
 | Gerenciar usuários, perfis e redefinir senhas de outros | Sim | Não | Não |
 | Alterar a própria senha informando a atual | Sim | Sim | Sim |
 
+A tabela acima descreve os perfis iniciais. Em **Configurações → Permissões**, o administrador pode alterar os acessos de Técnico e Consulta e criar perfis personalizados. As permissões de gerenciar usuários, permissões e sistema permanecem exclusivas do Administrador e não podem ser desmarcadas nele. Dependências entre consultar e alterar são validadas no servidor.
+
 Os perfis se aplicam a todos os dados do sistema: ainda não há separação por empresa, setor ou solicitante. Controle remoto continua pendente. Alterações de senha, perfil ou situação encerram as sessões da conta afetada. O sistema impede desativar ou rebaixar o último administrador ativo. **Minha senha**, no topo da tela, permite alterar sua senha e exige novo login.
 
 ### Atualizar uma instalação existente
 
 Pare a tarefa `Servitec-Sistema` (ou o processo manual), faça backup da pasta `data` com o sistema parado, atualize os arquivos pelo GitHub e inicie novamente. Não apague nem substitua o banco por um banco vazio. A primeira inicialização adiciona automaticamente as colunas de perfil e situação, preservando os dados e o login do administrador existente. Nenhuma senha padrão é criada. Atualize o navegador com Ctrl+F5. A migração foi testada com banco no formato anterior e após reinício, além dos testes de bloqueio de operações por perfil e dos fluxos de usuários no navegador.
+
+
+## Configurações — versão 0.2.0
+
+A navegação e o modelo de central de TI foram mantidos. As melhorias das referências foram adaptadas aos módulos existentes; não há módulos de compras, financeiro ou integração com Conta Azul nesta versão.
+
+- **Permissões:** matriz por perfil, novos perfis personalizados, dependências entre acessos e bloqueio da API mesmo que o cliente tente chamar uma operação escondida na tela. Perfis novos começam sem acesso. Permissões de administração são fixas.
+- **Atendimento:** destaque amarelo/vermelho de chamados parados na mesma situação, em dias inteiros. Padrão: amarelo em 2 dias e vermelho em 5. Mudar o status reinicia a contagem; salvar o mesmo status não reinicia. Chamados resolvidos não recebem alertas. Nos dados anteriores à atualização, o ponto inicial é a data de criação. Não se trata de SLA contratado e não há envio de e-mail.
+- **Empresa:** nome fantasia, razão social, CNPJ, inscrição estadual, endereço, cidade/UF, telefone, e-mail, site e logotipo PNG/JPEG/WebP (até 256 KB). Apenas nome e presença do logo são públicos para personalizar a entrada; demais dados exigem permissão. O upload não aceita SVG ou código executável.
+- **Importações:** CSV UTF-8 separado por ponto e vírgula ou vírgula, com prévia e confirmação. Cabeçalhos `codigo` e `nome` são obrigatórios; `responsavel` e `sistema` são opcionais. Acentos nos cabeçalhos também são reconhecidos. Limites: 512 KB e 1.000 registros. Códigos são únicos e diferenciam maiúsculas/minúsculas. Códigos duplicados no arquivo ou linhas inválidas rejeitam todo o arquivo antes de gravar. Reimportar atualiza por código; colunas opcionais ausentes preservam os valores e células vazias limpam os valores. Equipamentos antigos sem código são preservados.
+- **Atividades:** registros de login/saída, tentativas de login recusadas, usuários, perfis, permissões, chamados, equipamentos, importações, regras e backups. Exibe páginas de 100 registros; senhas e tokens não são gravados nesse histórico. A interface não oferece exclusão do histórico. Não é um log externo à prova de alteração por administradores do servidor.
+- **Sistema:** versão e revisão Git carregadas no início do processo, contagens e backup SQLite com confirmação da senha do administrador. O banco baixado é consistente mesmo com WAL, não inclui sessões de login e inclui hashes de senhas, tokens de agentes e dados da empresa; guarde-o em local protegido. O backup não contém o código da aplicação. A atualização continua pelo GitHub; a interface não executa pacotes JSON ou código enviado pelo navegador.
+
+Depois de importar equipamentos, abra **Equipamentos → Renovar token**, confirme sua senha e configure o token no agente da máquina. A renovação invalida o token anterior e limpa o estado de comunicação até o próximo heartbeat. Essa função também está disponível nos equipamentos cadastrados manualmente, para recuperar acesso ao agente quando o token anterior não foi guardado.
+
+Exemplo de CSV:
+
+```csv
+codigo;nome;responsavel;sistema
+TI-001;Notebook recepção;Equipe TI;Windows 11
+TI-002;Servidor de arquivos;Infraestrutura;Linux
+```
+
+### Atualizar e recuperar no Windows Server
+
+1. Pare `Servitec-Sistema` e verifique que o processo da aplicação encerrou.
+2. Anote o commit atual (`git rev-parse HEAD`) e copie a pasta `data` inteira, com o sistema parado, para uma pasta de backup fora do checkout.
+3. Atualize todos os arquivos com `git pull --ff-only`, inicie a tarefa e use Ctrl+F5 no navegador. Não copie apenas `server.mjs`: ele agora depende de `configuration.mjs` e a interface usa `public/settings.js`.
+4. A migração é aditiva: preserva usuários, senhas, chamados, equipamentos e tokens, cria as tabelas de configurações e adiciona código de equipamento e início da situação do chamado. As permissões já configuradas são preservadas em reinícios futuros.
+
+Para recuperar apenas um backup baixado nesta versão: pare a tarefa, preserve uma cópia da pasta `data` atual, separe os antigos arquivos `sistema.db`, `sistema.db-wal` e `sistema.db-shm` em outro local, copie o arquivo baixado como `data/sistema.db` e inicie a tarefa. Não misture arquivos WAL/SHM antigos com um banco restaurado. Os usuários precisam fazer login novamente. Essa recuperação substitui o estado do banco pelo momento do backup.
+
+Para retornar a uma versão anterior do código, mantenha a aplicação parada e restaure **o código e o banco correspondentes ao mesmo backup anterior à atualização**. Não execute código antigo com os novos perfis personalizados: versões antigas não conhecem a nova matriz de permissões. A recuperação perde alterações posteriores ao backup; preserve o estado atual antes de qualquer retorno. Não há botão de reversão automática ou exclusão de dados nesta atualização.

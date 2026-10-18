@@ -1,1 +1,14 @@
-{"name":"sistema-ti","version":"0.1.0","private":true,"type":"module","scripts":{"start":"node server.mjs","check":"node --check server.mjs","test":"node --test"},"engines":{"node":">=24"}}
+{
+  "name": "sistema-ti",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check configuration.mjs && node --check public/app.js && node --check public/settings.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

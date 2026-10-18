@@ -98,3 +98,33 @@ code { display: inline-block; max-width: 100%; overflow-wrap: anywhere; backgrou
 select:disabled { opacity: .8; cursor: default; }
 @media(max-width:760px) { header { flex-wrap: wrap; gap: 12px; } .header-actions { gap: 10px; } #my-password { padding: 9px 12px; } }
 @media(max-width:420px) { .header-actions { margin-left: auto; } nav button[data-page="users"] { white-space: nowrap; } }
+.brand-logo { max-width: 62px; max-height: 50px; object-fit: contain; }
+.brand-name { overflow-wrap: anywhere; }
+.settings-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+.settings-tabs button { border: 1px solid var(--border); background: var(--surface); padding: 10px 16px; border-radius: 24px; color: var(--muted); }
+.settings-tabs button.active { background: #310768; color: white; border-color: #8351d1; box-shadow: none; }
+.settings-body > .panel:first-child { margin-top: 0; }
+.form-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0 20px; }
+.form-grid > div { min-width: 0; }
+.logo-preview { display: block; max-width: 220px; max-height: 100px; object-fit: contain; margin: 18px 0; }
+.check-label { display: flex; align-items: center; gap: 10px; }
+.check-label input,.permission-check { width: 18px; height: 18px; padding: 0; margin: 0; accent-color: #00b6d7; cursor: pointer; flex-shrink: 0; }
+.permission-check { display: inline-block; }
+.permission-check:disabled { cursor: default; }
+.permission-matrix thead th { text-align: center; min-width: 135px; }
+.permission-matrix thead th:first-child { text-align: left; min-width: 270px; }
+.permission-matrix tbody th { text-transform: none; font-size: 13px; letter-spacing: 0; color: var(--text); }
+.permission-matrix td { text-align: center; }
+.permission-matrix small { display: block; color: var(--muted); margin-top: 7px; font-size: 10px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.settings-save { margin-top: 22px; }
+.inline-form { max-width: 460px; }
+summary { cursor: pointer; color: #7de9fb; }
+.system-facts { display: flex; flex-wrap: wrap; gap: 12px 35px; }
+#backup-password { max-width: 450px; }
+#older-activity { margin-top: 20px; }
+@media(max-width:1000px) { .form-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:540px) { .form-grid { grid-template-columns: minmax(0,1fr); } .settings-tabs { overflow-x: visible; } .settings-tabs button { flex-shrink: 1; } }
+.badge.warning { color: #ffe397; background: #433516; border-color: #78652d; }
+.badge.critical { color: #ffb7bf; background: #471f35; border-color: #854257; }
+.badge.resolved { color: #99e9c0; background: #173b32; border-color: #2c6552; }
+#notice[data-kind="success"]:not(:empty) { color: #b7f2da; background: #14342e; border-color: #2e6557; }

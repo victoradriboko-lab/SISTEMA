@@ -70,10 +70,11 @@ export function createTelemetry({db,body,json,config,root}){
     json(res,200,{ok:true,serverTime:new Date(now).toISOString(),requestInventory:!sample.legacy&&!sample.inventory&&!current.has_inventory});return true;
   }
   async function handle(req,res,path,user){
-    if(path==='/api/agent/windows-package'&&req.method==='GET'){
+    if(['/api/agent/windows-package','/api/agent/windows-installer'].includes(path)&&req.method==='GET'){
       if(!config.allowed(user,'assets.write'))fail('Sem permissão para instalar agentes',403);
-      let data;try{data=readFileSync(join(root,'agents/windows/servitec-agent-windows.zip'));}catch{fail('Pacote do agente ainda não foi gerado no servidor',503);}
-      res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':'attachment; filename="servitec-agent-windows.zip"'});res.end(data);return true;
+      const installer=path.endsWith('windows-installer');const filename=installer?'ServitecAgentSetup.exe':'servitec-agent-windows.zip';
+      let data;try{data=readFileSync(join(root,'agents/windows',filename));}catch{fail('Pacote do agente ainda não foi gerado no servidor',503);}
+      res.writeHead(200,{'Content-Type':installer?'application/octet-stream':'application/zip','Content-Disposition':`attachment; filename="${filename}"`});res.end(data);return true;
     }
     if(/^\/api\/assets\/\d+\/telemetry$/.test(path)&&req.method==='GET'){
       if(!config.allowed(user,'monitor.read'))fail('Sem permissão para consultar monitoramento',403);

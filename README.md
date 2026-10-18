@@ -119,8 +119,8 @@ Para retornar a uma versão anterior do código, mantenha a aplicação parada e
 O pacote atende Windows 10/11 e Windows Server 2016 ou superior (.NET Framework 4.6.2+, PowerShell 5.1). O agente é um serviço nativo `ServitecAgent`; a máquina monitorada não precisa de Node.js ou Python.
 
 1. Atualize o **servidor**: pare `Servitec-Sistema`, preserve uma cópia de `data`, faça Pull de todos os arquivos e inicie a tarefa. A migração cria o histórico de telemetria e preserva usuários, equipamentos e dados anteriores.
-2. Em **Equipamentos**, cadastre cada máquina (ou use um cadastro existente), gere/renove seu token e clique em **Baixar agente Windows**. É necessário ter permissão para cadastrar equipamentos.
-3. Na máquina a monitorar, extraia TODO o ZIP e execute **instalar-agente.bat como administrador**. Informe a URL base do servidor e cole o token na entrada oculta. Use token exclusivo para cada equipamento.
+2. Em **Equipamentos**, cadastre cada máquina (ou use um cadastro existente), gere/renove seu token e clique em **Baixar instalador .exe**. É necessário ter permissão para cadastrar equipamentos.
+3. Na máquina a monitorar, abra **ServitecAgentSetup.exe** e aceite a solicitação de administrador. Os arquivos são extraídos automaticamente. O ZIP com BAT continua disponível como alternativa. Informe a URL base do servidor e cole o token na entrada oculta. Use token exclusivo para cada equipamento.
 4. Confira **Monitoramento → Detalhes**. A primeira coleta pode levar alguns minutos. O serviço inicia após reiniciar o Windows, sem precisar entrar em uma conta de usuário.
 
 Métricas são coletadas a cada 30 segundos; inventário e serviços automáticos, no início e a cada seis horas. A página consulta o servidor a cada 10 segundos, sem substituir formulários abertos. Offline após dois minutos sem amostra atual; uso de CPU/RAM/disco de 90% ou mais fica em destaque. Os valores exibidos são as últimas amostras recebidas, e ficam identificados como offline quando a comunicação para.
@@ -144,3 +144,18 @@ python3 scripts/package-agent.py agents/windows/bin/Release/net462/ServitecAgent
 O ZIP versionado inclui o executável compilado, seu checksum SHA-256, configuração de runtime, instaladores e fontes. Após qualquer alteração de C# ou instaladores, recompile e gere o pacote antes de distribuir. O checksum confirma integridade, não assinatura/autenticidade; ainda não há assinatura digital de código.
 
 **Validação feita nesta entrega:** compilação do executável para .NET Framework 4.6.2 sem erros/avisos; 18 verificações da política de conexão compartilhada com o agente; sintaxe dos instaladores conferida com o parser PowerShell; testes da API/protocolo, permissão, tokens, amostras atrasadas/duplicadas e compatibilidade do agente antigo; navegação, download, histórico e atualização automática no navegador e layout móvel com telemetria simulada. **Validação ainda necessária no Windows:** instalação e reinício do serviço, DPAPI/ACL, coleta WMI/Registro e envio de dados reais numa estação e num Windows Server. Os testes em Linux não substituem esse piloto.
+
+
+## Instalador único — versão 0.3.1
+
+**Equipamentos → Baixar instalador .exe** fornece `ServitecAgentSetup.exe`, acessível apenas a usuários com permissão de cadastrar equipamentos. O instalador contém o pacote completo, solicita elevação via manifesto `requireAdministrator`, extrai em pasta temporária restrita dentro de Program Files/ServitecAgent, executa a configuração existente e remove os temporários. Continua pedindo a URL do servidor e o token em entrada oculta; o download não incorpora credenciais.
+
+Não é necessário extrair ZIP nem executar BAT ao usar esse instalador. O fluxo usa um console com perguntas; não é um assistente gráfico. Requisitos de Windows/.NET, comunicação e serviço são os mesmos da versão 0.3.0. O instalador ainda não possui assinatura digital de editor. UAC, instalação e coleta reais devem ser verificados no piloto Windows.
+
+Para reconstruir depois de gerar o pacote ZIP:
+
+```sh
+dotnet build agents/windows/installer/ServitecAgentSetup.csproj -c Release
+```
+
+Copie `agents/windows/installer/bin/Release/net462/ServitecAgentSetup.exe` para `agents/windows/ServitecAgentSetup.exe` antes de distribuir. O ZIP é incorporado durante a compilação: ao atualizar o agente ou instaladores, gere novamente o ZIP e recompile também o instalador único.

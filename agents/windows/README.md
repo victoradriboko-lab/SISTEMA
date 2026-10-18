@@ -12,14 +12,14 @@ Agente de telemetria, sem controle de tela, execucao remota de comandos ou acess
 ## Instalar
 
 1. No sistema, cadastre um equipamento em Equipamentos ou renove seu token confirmando sua senha. Cada maquina precisa de um registro e token exclusivos.
-2. Baixe o pacote pelo botao Baixar agente Windows, na pagina Equipamentos, e extraia TODOS os arquivos numa pasta da maquina monitorada.
-3. Clique com o botao direito em instalar-agente.bat e escolha Executar como administrador.
+2. Na pagina Equipamentos, clique em Baixar instalador .exe e salve na maquina monitorada.
+3. Abra ServitecAgentSetup.exe e aceite a solicitacao de administrador. O instalador extrai automaticamente os arquivos e abre a configuracao no console. A opcao Pacote ZIP continua disponivel; nesse caso, extraia TODOS os arquivos e execute instalar-agente.bat como administrador.
 4. Informe a URL base do servidor (sem caminhos) e cole o token na entrada oculta. O instalador verifica acesso e token antes de registrar o servico.
 5. Confira o servico ServitecAgent no services.msc e os dados na pagina Monitoramento. A primeira coleta completa pode levar alguns minutos.
 
 O servico funciona como LocalSystem e inicia automaticamente sem login. Arquivos ficam em Program Files/ServitecAgent; configuracao, fila e log em ProgramData/ServitecAgent. As pastas ficam restritas a SYSTEM e Administradores. O token e protegido com DPAPI LocalMachine, nao fica em texto puro no config.json. Nao copie essa configuracao para outras maquinas ou para imagens de clonagem.
 
-O executavel do pacote tem checksum SHA-256 verificado pelo instalador. Esse checksum detecta corrupcao; nao substitui assinatura digital. O agente ainda nao tem certificado de assinatura de codigo. Obtenha o pacote apenas do seu servidor confiavel/GitHub do projeto; nao desative protecoes do Windows para executa-lo.
+O executavel do agente tem checksum SHA-256 verificado pelo instalador; o instalador .exe incorpora esse mesmo pacote e nao baixa codigo durante a instalacao. Esse checksum detecta corrupcao; nao substitui assinatura digital. O agente e o instalador ainda nao tem certificado de assinatura de codigo; o Windows pode mostrar editor desconhecido. Obtenha o pacote apenas do seu servidor confiavel/GitHub do projeto; nao desative protecoes do Windows para executa-lo.
 
 ## Coleta e comunicacao
 
@@ -42,3 +42,5 @@ Para remover: execute desinstalar-agente.bat como administrador. Configuracao e 
 ## Validacao desta entrega
 
 Executavel compilado em Linux para .NET Framework 4.6.2, sem avisos ou erros. Politicas de HTTPS/LAN testadas com o mesmo codigo-fonte; sintaxe dos instaladores conferida com o parser PowerShell. Comunicacao, autorizacao, deduplicacao, amostras atrasadas e painel validados com dados de teste. Instalacao do servico, DPAPI, consultas WMI/Registro, coleta real e reinicio do Windows precisam de validacao piloto numa maquina Windows e num Windows Server antes de distribuicao ampla.
+
+O bootstrap ServitecAgentSetup.exe pede elevacao pelo manifesto do Windows, extrai o pacote numa pasta temporaria restrita dentro de Program Files/ServitecAgent e a remove ao terminar. Nao inclui token ou URL preconfigurados. O pedido de elevacao/UAC e a execucao final tambem precisam de validacao piloto no Windows.

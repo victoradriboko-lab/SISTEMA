@@ -16,7 +16,11 @@ No menu **Empresas e contratos**, selecione uma empresa já criada em **Equipame
 
 Para editar a ficha e o contrato, é necessária a permissão **Gerenciar contratos, SLA e preventivas**. A consulta exige acesso aos chamados. Valores do contrato são apresentados somente a quem gerencia contratos; a rentabilidade tem permissão própria. Guarde senhas no **Cofre**, em vez das observações técnicas.
 
-Configure mensalidade, horas inclusas, custo interno da hora e metas de primeira resposta e solução para cada prioridade, em minutos. Escolha atendimento 24x7 ou de segunda a sexta, com fuso horário e hora inicial/final. O calendário útil não desconta feriados específicos nem possui pausa por status.
+Na atualização 0.4.1, a mensalidade é calculada pelas quantidades contratadas: **computador R$ 90,00/mês, notebook R$ 90,00/mês e servidor R$ 300,00/mês**. Os preços unitários podem ser ajustados por empresa, com justificativa da complexidade ou condição negociada quando diferirem do padrão. O total é calculado no servidor em centavos e aparece discriminado na rentabilidade. As quantidades são informadas no contrato e não mudam automaticamente com os agentes do inventário. Contratos anteriores com mensalidade fixa são preservados até a escolha explícita do modelo por equipamentos.
+
+Exemplo: 10 computadores + 5 notebooks + 2 servidores = R$ 1.950,00/mês. Se esses servidores forem negociados a R$ 450,00 pela complexidade, o total será R$ 2.250,00/mês.
+
+Configure também horas previstas para acompanhamento (opcional), custo interno da hora e metas de primeira resposta e solução para cada prioridade, em minutos. Escolha atendimento 24x7 ou de segunda a sexta, com fuso horário e hora inicial/final. O calendário útil não desconta feriados específicos nem possui pausa por status.
 
 Ativar SLA afeta novos chamados, inclusive por e-mail, portal e preventivas. Cada chamado preserva uma cópia das metas vigentes; mudar o contrato não reescreve prazos anteriores. A primeira resposta é marcada ao iniciar atendimento, resolver ou enviar mensagem pública como operador. Resolver registra a conclusão; reabrir mantém os prazos originais. Chamados antigos permanecem sem SLA. Trocar de empresa recalcula o SLA, mas a troca é recusada quando há conversa, anexos ou horas para preservar o histórico entre empresas.
 
@@ -59,7 +63,7 @@ O administrador pode pausar ou retomar todas as automações de alertas e preven
 
 ## Rentabilidade
 
-A permissão **Consultar rentabilidade e custos** libera o menu. Selecione o mês do trabalho e compare por empresa: mensalidade contratada atual, horas registradas/inclusas, custo das horas, despesas e margem estimada.
+A permissão **Consultar rentabilidade e custos** libera o menu. Selecione o mês do trabalho e compare por empresa: mensalidade calculada pelas quantidades e preços atuais do contrato (ou valor fixo anterior), composição por tipo, horas registradas/previstas, custo das horas, despesas e margem estimada.
 
 A margem é mensalidade menos custos registrados. Não inclui impostos, faturamento efetivo, descontos, pró-rata, contas a receber nem um histórico contábil de mensalidades. Mudar a mensalidade muda a referência de receita exibida para qualquer mês; custos de trabalho permanecem com o valor da hora salvo no lançamento. Use esta visão como estimativa operacional.
 

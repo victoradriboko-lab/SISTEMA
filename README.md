@@ -330,3 +330,8 @@ integração de abertura do RustDesk com autorização, TOTP, cofre e conferênc
 Consulte o [guia de atualização e uso da versão 0.4.0](docs/melhorias-v0.4.0.md)
 para configuração, permissões, implantação no Windows Server e limites das integrações.
 O RustDesk e a conta real do Google Workspace precisam de configuração no servidor.
+
+Na versão 0.4.1, contratos calculam a mensalidade por quantidades contratadas:
+computador/notebook R$ 90,00 e servidor R$ 300,00 por mês, com preços negociados
+por empresa e justificativa de complexidade. Valores fixos anteriores são preservados
+até a conversão explícita. O inventário não altera a cobrança automaticamente.

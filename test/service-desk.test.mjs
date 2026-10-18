@@ -6,6 +6,7 @@ import {mkdtempSync,rmSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
+import {calculateBilling} from '../contract-billing.mjs';
 import {deadline} from '../service-desk.mjs';
 import {totp} from '../security.mjs';
 import {createOperations} from '../operations.mjs';
@@ -59,9 +60,28 @@ test('gestão integrada: contratos, histórico, isolamento, horas, preventivas, 
   const vault=await call('vault','POST',{clientId:a.id,label:'Roteador',secret:'segredo-nao-pode-vazar',password},admin);assert.equal(vault.status,201);assert.ok(!db.prepare('SELECT secret FROM service_vault').get().secret.includes('segredo-nao'));assert.ok(!JSON.stringify((await call('vault','GET',undefined,admin)).data).includes('segredo-nao'));
   assert.equal((await call('vault/'+vault.data.id+'/reveal','POST',{password:'errada'},admin)).status,403);assert.equal((await call('vault/'+vault.data.id+'/reveal','POST',{password},admin)).data.secret,'segredo-nao-pode-vazar');
   const remote=await call('operations/remote','POST',{assetId:asset,remoteId:'123456789',reason:'Suporte de rede',consent:'Ana autorizou pelo telefone'},admin);assert.equal(remote.status,201);assert.match(remote.data.url,/^rustdesk:/);
+  const equipmentBilling={model:'equipment',items:{computer:{count:10,unitPrice:90},notebook:{count:5,unitPrice:90},server:{count:2,unitPrice:300}}};
+  assert.equal((await call('desk/companies/'+a.id,'PUT',{profile:{contact:'Ana'},contract:{...contract,monthly:1,billing:equipmentBilling}},admin)).status,200);
+  const saved=(await call('desk/companies','GET',undefined,admin)).data.find(c=>c.id===a.id);assert.equal(saved.contract.monthly,1950);assert.equal(saved.contract.billing.items.server.subtotal,600);
+  const updatedFinance=(await call('desk/finance?month=2026-10','GET',undefined,admin)).data.rows.find(c=>c.id===a.id);assert.equal(updatedFinance.revenue,1950);assert.equal(updatedFinance.margin,1750);
+  assert.equal((await call('desk/companies/'+a.id,'PUT',{contract:{...contract,billing:{...equipmentBilling,items:{server:{count:2,unitPrice:450}}}}},admin)).status,400);
+  assert.equal((await call('desk/companies/'+a.id,'GET',undefined,client,true)).status,403);
   const setup=(await call('security/setup','POST',{password},admin)).data;assert.equal(setup.secret.length,32);const enabled=await call('security/confirm','POST',{password,code:totp(setup.secret)},admin);assert.equal(enabled.status,200);assert.equal(enabled.data.codes.length,8);assert.equal((await call('me','GET',undefined,admin)).status,401);
   assert.equal((await call('login','POST',{email:'admin@example.test',password})).status,401);const recovery=enabled.data.codes[0];assert.equal((await call('login','POST',{email:'admin@example.test',password,code:recovery})).status,200);assert.equal((await call('login','POST',{email:'admin@example.test',password,code:recovery})).status,401);
   for(let i=0;i<9;i++)await call('login','POST',{email:'unknown@example.test',password:'wrong'});assert.equal((await call('login','POST',{email:'unknown@example.test',password:'wrong'})).status,429);
   assert.equal(readFileSync(join(dir,'security.key')).length,32);
  }finally{db?.close();if(child.exitCode===null){child.kill();await once(child,'exit');}rmSync(dir,{recursive:true,force:true});}
+});
+
+
+test('contrato por equipamentos calcula em centavos, permite negociação justificada e preserva legado',()=>{
+ const billing={model:'equipment',items:{computer:{count:10},notebook:{count:5},server:{count:2}}};
+ const standard=calculateBilling(billing);assert.equal(standard.monthly,1950);assert.equal(standard.items.computer.unitPrice,90);assert.equal(standard.items.notebook.unitPrice,90);assert.equal(standard.items.server.unitPrice,300);
+ const negotiated={...billing,complexityNote:'Servidor com alta complexidade de virtualização',items:{...billing.items,server:{count:2,unitPrice:450}}};assert.equal(calculateBilling(negotiated).monthly,2250);
+ assert.throws(()=>calculateBilling({...negotiated,complexityNote:''}),/justifica/);
+ assert.throws(()=>calculateBilling({model:'equipment',items:{computer:{count:-1}}}),/quantidades/);
+ assert.throws(()=>calculateBilling({model:'equipment',items:{notebook:{count:1.5}}}),/quantidades/);
+ assert.throws(()=>calculateBilling({model:'equipment',items:{server:{count:1,unitPrice:300.001}}}),/duas casas/);
+ assert.equal(calculateBilling({model:'equipment',complexityNote:'Condição negociada',items:{computer:{count:3,unitPrice:90.01}}}).monthly,270.03);
+ assert.deepEqual(calculateBilling(undefined,3000),{model:'fixed',monthly:3000});
 });

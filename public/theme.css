@@ -112,3 +112,5 @@ button.theme-toggle,.customer-actions button.theme-toggle{display:inline-flex;al
 #service-content input[type=checkbox], #desk-file input[type=checkbox] { width: auto; display: inline-block; margin-right: 8px; }
 #service-content label:has(input[type=checkbox]), #desk-file label:has(input[type=checkbox]) { display: flex; align-items: center; gap: 8px; }
 @media (max-width:600px) { #service-content fieldset { grid-template-columns: minmax(0,1fr); } }
+
+#service-content fieldset > .billing-wide { grid-column: 1 / -1; }

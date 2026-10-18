@@ -336,8 +336,8 @@ computador/notebook R$ 90,00 e servidor R$ 300,00 por mês, com preços negociad
 por empresa e justificativa de complexidade. Valores fixos anteriores são preservados
 até a conversão explícita. O inventário não altera a cobrança automaticamente.
 
-Na versão 0.4.2, o instalador do agente oferece atalhos de atendimento na Área de
-Trabalho e no menu Iniciar. O aplicativo abre o Painel do Cliente em janela pelo
-Edge/Chrome e exige conta com permissão de abrir solicitações. Informe a URL do
-painel, em sua porta própria, ao instalar/reinstalar. Veja o
-[guia do agente e aplicativo](agents/windows/README.md#aplicativo-de-atendimento-e-atalhos).
+Na versão 0.4.3, o agente oferece o aplicativo nativo **SERVITEC VSA — Abrir chamado**,
+sem login, autorizado pela empresa configurada durante a instalação. A credencial do
+aplicativo permite somente enviar solicitações daquela empresa. O portal continua
+exigindo conta para consultas. Atualize o servidor e reinstale o novo agente nos PCs.
+Veja o [guia do aplicativo](agents/windows/README.md#aplicativo-de-atendimento-sem-login-e-atalhos--versão-043).

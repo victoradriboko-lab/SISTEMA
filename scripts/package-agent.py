@@ -18,6 +18,7 @@ files = {name: (source / name).read_bytes() for name in [
 client = (source / 'client/bin/Release/net462/ServitecClient.exe').read_bytes()
 if not client.startswith(b'MZ'):
     raise SystemExit('Compile primeiro o aplicativo ServitecClient.')
+files['ServitecClient.exe.config'] = (source / 'client/bin/Release/net462/ServitecClient.exe.config').read_bytes()
 files['ServitecClient.exe'] = client
 files['ServitecClient.sha256'] = (hashlib.sha256(client).hexdigest() + '\n').encode('ascii')
 files['ServitecAgent.exe'] = executable

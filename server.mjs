@@ -1,3 +1,4 @@
+import {createDeviceSupport} from './device-support.mjs';
 import {createServiceDesk} from './service-desk.mjs';
 import {createOperations} from './operations.mjs';
 import {createSecurity} from './security.mjs';
@@ -51,6 +52,7 @@ const reportModels=createReportModels({db,body,json,config});
 const reports=createReports({db,json,config});
 const clientAccess=createClientAccess({db,body,json,config,hash,validEmail,validPassword,portalURL});
 const desk=createServiceDesk({db,body,json,config});
+const deviceSupport=createDeviceSupport({db,body,json,config,desk});
 const security=createSecurity({db,body,json,config,check,dataDir});
 const operations=createOperations({db,body,json,config,desk});
 const clientPortal=createClientPortal({db,json,config});
@@ -71,6 +73,7 @@ const b=await body(req);if(!str(b.name)||!validEmail(b.email)||!validPassword(b.
 if(db.prepare('SELECT id FROM users LIMIT 1').get())return json(res,409,{error:'Administrador já cadastrado'});
 const created=db.prepare('INSERT INTO users(name,email,password) VALUES(?,?,?)').run(str(b.name),str(b.email).toLowerCase(),hash(b.password));config.audit({id:Number(created.lastInsertRowid),name:str(b.name)},'users.setup','Administrador inicial cadastrado');return json(res,201,{ok:true});}
 if(path==='/api/login'&&req.method==='POST'){const b=await body(req);const attempt=security.throttle(req,b.email);const user=db.prepare('SELECT * FROM users WHERE email=?').get(str(b.email).toLowerCase());if(!user||!user.active||typeof b.password!=='string'||b.password.length>256||!check(b.password,user.password)){config.audit(null,'auth.failed','Tentativa de login recusada');return json(res,401,{error:'Credenciais inválidas'});}if(isClient(user)!==customer)return json(res,403,{error:customer?'Este painel é exclusivo para contas de clientes. Use o sistema interno com sua conta de operador.':'Esta conta pertence ao Painel do Cliente. Acesse '+portalURL(req)});if(!security.verify(user.id,b.code))return json(res,401,{error:'Informe o código do autenticador ou um código de recuperação válido'});security.clear(attempt);config.audit(user,'auth.login',customer?'Login no Painel do Cliente':'Login realizado');const token=randomBytes(32).toString('hex');db.prepare('INSERT INTO sessions(token,user_id,expires,audience) VALUES(?,?,?,?)').run(token,user.id,Date.now()+28800000,audience);res.setHeader('Set-Cookie',`${cookieName}=${token}; ${cookieOptions}`);return json(res,200,{ok:true});}
+if(!customer&&await deviceSupport.publicRoute(req,res,path))return;
 if(!customer&&await telemetry.publicRoute(req,res,path))return;
 if(path.startsWith('/api/')){
 const token=(req.headers.cookie||'').split(';').map(value=>value.trim()).find(value=>value.startsWith(cookieName+'='))?.slice(cookieName.length+1);const session=db.prepare('SELECT users.id,users.name,users.email,users.role,users.account_type,users.client_id,(SELECT name FROM clients WHERE id=users.client_id) AS client_name FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>? AND users.active=1 AND sessions.audience=?').get(token||'',Date.now(),audience);if(!session||isClient(session)!==customer)return json(res,401,{error:'Entre para continuar'});
@@ -88,6 +91,7 @@ config.audit(session,'users.password','Própria senha alterada');return json(res
 if(await security.handle(req,res,path,session))return;
 if(await desk.handle(req,res,path,session,customer))return;
 if(customer){await clientPortal.handle(req,res,path,session);return;}
+if(await deviceSupport.handle(req,res,path,session))return;
 if(await operations.handle(req,res,path,session))return;
 if(await mail.handle(req,res,path,session))return;
 if(await clientAccess.handle(req,res,path,session))return;
@@ -149,7 +153,7 @@ desk.updated(id,session,ticket);config.audit(session,'tickets.update',`Chamado #
 
 if(path==='/api/assets'&&req.method==='POST'){const b=await body(req);if(!str(b.name))return json(res,400,{error:'Nome obrigatório'});const code=str(b.code,81)||null;if(code&&code.length>80)return json(res,400,{error:'Código deve ter até 80 caracteres'});if(code&&db.prepare('SELECT id FROM assets WHERE code=?').get(code))return json(res,409,{error:'Código de equipamento já cadastrado'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const token=randomBytes(32).toString('hex');const row=db.prepare('INSERT INTO assets(name,owner,os,token,code,client_id) VALUES(?,?,?,?,?,?)').run(str(b.name),str(b.owner),str(b.os),token,code,clientId);config.audit(session,'assets.create',`Equipamento #${row.lastInsertRowid} cadastrado`);return json(res,201,{id:Number(row.lastInsertRowid),...(clientId?{}:{token})});}
 return json(res,404,{error:'Rota não encontrada'});}
-const files=customer?['/desk.js','/security-ui.js','/','/theme.js','/theme.css','/customer-app.js','/customer.css','/client-portal.js','/reports.js']:[ '/contract-billing.js','/desk.js','/service-ui.js','/security-ui.js','/', '/mail.js','/mail-settings.js','/mail.css','/theme.js','/theme.css','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/style.css'];
+const files=customer?['/desk.js','/security-ui.js','/','/theme.js','/theme.css','/customer-app.js','/customer.css','/client-portal.js','/reports.js']:[ '/support-devices.js','/contract-billing.js','/desk.js','/service-ui.js','/security-ui.js','/', '/mail.js','/mail-settings.js','/mail.css','/theme.js','/theme.css','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/style.css'];
 if(req.method==='GET'&&files.includes(path)){const name=path==='/'?(customer?'customer.html':'index.html'):path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
 json(res,404,{error:'Não encontrado'});
 }catch(err){json(res,err.status||400,{error:err.status?err.message:'Não foi possível processar a solicitação'});}};

@@ -14,5 +14,8 @@
     <Compile Include="../AgentPolicy.cs" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Security" />
   </ItemGroup>
 </Project>

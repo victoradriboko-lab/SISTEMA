@@ -1,11 +1,11 @@
 {
   "name": "sistema-ti",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check configuration.mjs && node --check public/app.js && node --check public/settings.js && node --check telemetry.mjs && node --check public/monitor.js && node --check clients.mjs && node --check public/dashboard.js && node --check reports.mjs && node --check public/reports.js && node --check report-models.mjs && node --check backups.mjs && node --check public/backup-settings.js && node --check client-access.mjs && node --check client-portal.mjs && node --check public/client-access.js && node --check public/client-portal.js && node --check public/customer-app.js && node --check public/theme.js && node --check mail.mjs && node --check mail-receiver.mjs && node --check public/mail.js && node --check public/mail-settings.js && node --check service-desk.mjs && node --check operations.mjs && node --check security.mjs && node --check public/desk.js && node --check public/service-ui.js && node --check public/security-ui.js && node --check contract-billing.mjs && node --check public/contract-billing.js",
+    "check": "node --check server.mjs && node --check configuration.mjs && node --check public/app.js && node --check public/settings.js && node --check telemetry.mjs && node --check public/monitor.js && node --check clients.mjs && node --check public/dashboard.js && node --check reports.mjs && node --check public/reports.js && node --check report-models.mjs && node --check backups.mjs && node --check public/backup-settings.js && node --check client-access.mjs && node --check client-portal.mjs && node --check public/client-access.js && node --check public/client-portal.js && node --check public/customer-app.js && node --check public/theme.js && node --check mail.mjs && node --check mail-receiver.mjs && node --check public/mail.js && node --check public/mail-settings.js && node --check service-desk.mjs && node --check operations.mjs && node --check security.mjs && node --check public/desk.js && node --check public/service-ui.js && node --check public/security-ui.js && node --check contract-billing.mjs && node --check public/contract-billing.js && node --check device-support.mjs && node --check public/support-devices.js",
     "test": "node --test"
   },
   "engines": {

@@ -33,24 +33,8 @@ try {
     $request.Headers['Authorization'] = 'Bearer ' + $token
     $response = $request.GetResponse(); try { if ([int]$response.StatusCode -ne 200) { throw 'Servidor recusou o token.' } } finally { $response.Dispose() }
 
-    Write-Host 'Atalho de atendimento: informe a URL do Painel do Cliente (porta propria, nao a URL interna).'
-    $portal = (Read-Host 'URL do Painel do Cliente ou ENTER para nao criar/alterar atalho').Trim().TrimEnd('/')
-    $portalAllowLan = $false
-    if ($portal) {
-        & $binary --check-url $portal
-        if ($LASTEXITCODE -ne 0) { throw 'URL do painel invalida. Use HTTPS sem caminho, ou HTTP com IP privado.' }
-        if (([Uri]$portal).Scheme -eq 'http') {
-            if ((Read-Host 'Confirma Painel do Cliente por HTTP somente na LAN? Digite SIM') -cne 'SIM') { throw 'Use HTTPS para o Painel do Cliente.' }
-            $portalAllowLan = $true
-        }
-        $probe = [Net.HttpWebRequest]::Create($portal + '/api/state')
-        $probe.Method = 'GET'; $probe.AllowAutoRedirect = $false; $probe.Timeout = 15000
-        $portalResponse = $probe.GetResponse()
-        try {
-            $reader = New-Object IO.StreamReader($portalResponse.GetResponseStream())
-            try { $portalState = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
-            if ([int]$portalResponse.StatusCode -ne 200 -or $portalState.portal -ne 'client') { throw 'O endereco informado nao e o Painel do Cliente. Confira a porta e o dominio.' }
-        } finally { $portalResponse.Dispose() }
+    $installClient = ((Read-Host 'Criar aplicativo de chamados sem login? ENTER para SIM, N para somente monitoramento') -ine 'N')
+    if ($installClient) {
         $clientBinary = Join-Path $PSScriptRoot 'ServitecClient.exe'
         $clientHash = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'ServitecClient.sha256') -Raw).Trim()
         if ($clientHash -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $clientBinary -Algorithm SHA256).Hash -ne $clientHash) { throw 'Aplicativo de atendimento invalido. Baixe novamente o pacote completo.' }
@@ -63,7 +47,6 @@ try {
         $installed = Get-CimInstance Win32_Service -Filter "Name='ServitecAgent'"
         if ($installed.PathName.Trim(' ').Trim('"') -ne (Join-Path $target 'ServitecAgent.exe')) { throw 'Existe um servico com este nome em outra pasta. Ele foi preservado.' }
     }
-    if ($service) { Stop-Service -Name 'ServitecAgent'; $service.WaitForStatus('Stopped',[TimeSpan]::FromSeconds(45)) }
     New-Item -ItemType Directory -Path $target,$data -Force | Out-Null
     # Apenas SYSTEM e Administradores podem ler o token protegido e alterar o agente.
     foreach ($folder in @($target,$data)) {
@@ -87,6 +70,22 @@ try {
         $parsed = [Guid]::Empty
         if ([Guid]::TryParse([string]$old.machineId,[ref]$parsed)) { $machineId = $parsed.ToString() }
     }
+    $support = $null
+    if ($installClient) {
+        $enrollRequest = [Net.HttpWebRequest]::Create($server + '/api/agent/support/enroll')
+        $enrollRequest.Method = 'POST'; $enrollRequest.AllowAutoRedirect = $false; $enrollRequest.Timeout = 15000
+        $enrollRequest.ContentType = 'application/json'; $enrollRequest.Headers['Authorization'] = 'Bearer ' + $token
+        $enrollBytes = [Text.Encoding]::UTF8.GetBytes((@{machineId=$machineId;name=$env:COMPUTERNAME} | ConvertTo-Json -Compress))
+        $enrollRequest.ContentLength = $enrollBytes.Length
+        $stream = $enrollRequest.GetRequestStream(); try { $stream.Write($enrollBytes,0,$enrollBytes.Length) } finally { $stream.Dispose() }
+        $enrollResponse = $enrollRequest.GetResponse()
+        try {
+            $reader = New-Object IO.StreamReader($enrollResponse.GetResponseStream())
+            try { $support = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
+            if ([string]$support.supportToken -notmatch '^[a-f0-9]{64}$') { throw 'Autorizacao do aplicativo invalida.' }
+        } finally { $enrollResponse.Dispose() }
+    }
+    if ($service) { Stop-Service -Name 'ServitecAgent'; $service.WaitForStatus('Stopped',[TimeSpan]::FromSeconds(45)) }
     Add-Type -AssemblyName System.Security
     $encrypted = [Security.Cryptography.ProtectedData]::Protect([Text.Encoding]::UTF8.GetBytes($token),$null,[Security.Cryptography.DataProtectionScope]::LocalMachine)
     $config = @{serverUrl=$server;protectedToken=[Convert]::ToBase64String($encrypted);machineId=$machineId;intervalSeconds=30;allowInsecureLan=$allowLan}
@@ -106,7 +105,7 @@ try {
     Start-Service -Name 'ServitecAgent'
     Start-Sleep -Seconds 3
     if ((Get-Service -Name 'ServitecAgent').Status -ne 'Running') { throw 'Servico encerrou. Consulte C:\ProgramData\ServitecAgent\agent.log' }
-    if ($portal) {
+    if ($installClient) {
         # Pasta publica separada: o usuario pode executar o cliente sem ler o token/DPAPI do servico.
         $clientTarget = Join-Path $env:ProgramFiles 'ServitecClient'
         New-Item -ItemType Directory -Path $clientTarget -Force | Out-Null
@@ -124,7 +123,9 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Nao foi possivel proteger o aplicativo do cliente.' }
         }
         Copy-Item -LiteralPath $clientBinary -Destination (Join-Path $clientTarget 'ServitecClient.exe') -Force
-        @{portalUrl=$portal;allowInsecureLan=$portalAllowLan} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $clientTarget 'portal.json') -Encoding UTF8
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ServitecClient.exe.config') -Destination $clientTarget -Force
+        $protectedSupport = [Security.Cryptography.ProtectedData]::Protect([Text.Encoding]::UTF8.GetBytes([string]$support.supportToken),$null,[Security.Cryptography.DataProtectionScope]::LocalMachine)
+        @{serverUrl=$server;companyName=[string]$support.companyName;protectedSupportToken=[Convert]::ToBase64String($protectedSupport);allowInsecureLan=$allowLan} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $clientTarget 'portal.json') -Encoding UTF8
         $shell = New-Object -ComObject WScript.Shell
         $menu = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'SERVITEC VSA'
         New-Item -ItemType Directory -Path $menu -Force | Out-Null
@@ -137,6 +138,7 @@ try {
         }
         Write-Host 'Atalhos SERVITEC VSA - Abrir chamado criados na Area de Trabalho e no menu Iniciar.' -ForegroundColor Green
     }
+    $support = $null
     Write-Host 'Servico instalado e iniciado. A coleta completa pode levar ate alguns minutos.' -ForegroundColor Green
     Write-Host 'Confira Monitoramento no sistema. Log: C:\ProgramData\ServitecAgent\agent.log'
     Write-Host 'Nao e necessario abrir portas de entrada nas maquinas monitoradas.'

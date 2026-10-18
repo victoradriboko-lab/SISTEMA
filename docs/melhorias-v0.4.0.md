@@ -93,17 +93,24 @@ As cópias incluem anexos armazenados no banco e as chaves locais. Sessões são
 
 Para um ensaio operacional, restaure em outra pasta e portas livres, mantenha a instalação isolada, instale dependências e confira login, empresas, chamados e anexos. A suíte de testes inicia uma cópia restaurada com dados de teste; a rotina de integridade não substitui o ensaio no seu Windows Server. Nenhuma restauração foi executada no seu servidor real.
 
-## Atalho de atendimento · atualização 0.4.2
+## Aplicativo de atendimento sem login · atualização 0.4.3
 
-O novo instalador do agente oferece o aplicativo **SERVITEC VSA — Abrir chamado**
-na Área de Trabalho e no menu Iniciar. Durante a instalação, informe também a URL
-base do Painel do Cliente, com sua porta ou domínio próprio. O instalador valida
-que o endereço corresponde ao painel externo. ENTER ignora a criação ou alteração
-do atalho, útil em servidores que precisam apenas do monitoramento.
+O instalador cria **SERVITEC VSA — Abrir chamado** na Área de Trabalho e no menu
+Iniciar. O aplicativo agora usa uma janela nativa e a autorização do token da empresa
+informado na instalação; não exige navegador, conta do portal ou senha do usuário.
 
-O aplicativo abre Edge/Chrome em modo de janela. O usuário faz login e vê o formulário
-quando sua conta tem permissão para abrir solicitações. A empresa vem da conta,
-e o token do agente não fica no aplicativo nem autentica usuários. Computadores
-já instalados precisam executar novamente o novo instalador. Veja o guia em
-`agents/windows/README.md`. A instalação nativa e os atalhos precisam de validação
-piloto no Windows; o fluxo web e a compilação foram validados no ambiente de desenvolvimento.
+O instalador obtém uma autorização exclusiva por computador, apenas para criar
+chamados, protegida no Windows por DPAPI. O token da empresa fica restrito ao
+serviço. Nome e contato são declarados pelo solicitante, sem autenticação pessoal;
+o sistema identifica essa origem no chamado. Não são usados para vincular remetentes
+nem enviar e-mails automaticamente. A empresa e a prioridade são definidas pelo servidor.
+
+Não há acesso a histórico, gráficos ou outras informações por essa autorização.
+O portal mantém suas contas e permissões para consultas. Em Equipamentos, consulte
+ou revogue os aplicativos autorizados. Renovar o token da empresa também invalida as
+autorizações anteriores. Há proteção contra reenvio duplicado e limite de dez chamados
+por hora por dispositivo. Sem rede, o aplicativo informa a falha e permite repetir o envio.
+
+Atualize primeiro a plataforma e depois execute novamente o novo instalador nos PCs.
+Na instalação, ENTER inclui o aplicativo; N instala somente o monitoramento. O piloto
+nativo no Windows ainda é necessário; os testes de API e compilação foram executados.

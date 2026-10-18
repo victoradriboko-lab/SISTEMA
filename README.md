@@ -335,3 +335,9 @@ Na versão 0.4.1, contratos calculam a mensalidade por quantidades contratadas:
 computador/notebook R$ 90,00 e servidor R$ 300,00 por mês, com preços negociados
 por empresa e justificativa de complexidade. Valores fixos anteriores são preservados
 até a conversão explícita. O inventário não altera a cobrança automaticamente.
+
+Na versão 0.4.2, o instalador do agente oferece atalhos de atendimento na Área de
+Trabalho e no menu Iniciar. O aplicativo abre o Painel do Cliente em janela pelo
+Edge/Chrome e exige conta com permissão de abrir solicitações. Informe a URL do
+painel, em sua porta própria, ao instalar/reinstalar. Veja o
+[guia do agente e aplicativo](agents/windows/README.md#aplicativo-de-atendimento-e-atalhos).

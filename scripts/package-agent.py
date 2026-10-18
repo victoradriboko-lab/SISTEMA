@@ -15,6 +15,11 @@ files = {name: (source / name).read_bytes() for name in [
     'desinstalar-agente.ps1', 'ServitecAgent.exe.config', 'README.md',
     'ServitecAgent.cs', 'AgentPolicy.cs', 'ServitecAgent.csproj',
 ]}
+client = (source / 'client/bin/Release/net462/ServitecClient.exe').read_bytes()
+if not client.startswith(b'MZ'):
+    raise SystemExit('Compile primeiro o aplicativo ServitecClient.')
+files['ServitecClient.exe'] = client
+files['ServitecClient.sha256'] = (hashlib.sha256(client).hexdigest() + '\n').encode('ascii')
 files['ServitecAgent.exe'] = executable
 files['ServitecAgent.sha256'] = (hashlib.sha256(executable).hexdigest() + '\n').encode('ascii')
 archive = source / 'servitec-agent-windows.zip'
@@ -28,5 +33,6 @@ with ZipFile(archive, 'w', ZIP_DEFLATED) as package:
         package.writestr(info, content)
 with ZipFile(archive) as package:
     assert package.testzip() is None
+    assert package.read('ServitecClient.sha256').decode().strip() == hashlib.sha256(package.read('ServitecClient.exe')).hexdigest()
     assert package.read('ServitecAgent.sha256').decode().strip() == hashlib.sha256(package.read('ServitecAgent.exe')).hexdigest()
 print('Pacote gerado e validado:', archive.name, '-', len(files), 'arquivos')

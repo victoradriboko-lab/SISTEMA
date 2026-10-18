@@ -92,3 +92,18 @@ Em **Configurações → Backups**, o histórico apresenta o número de cada có
 As cópias incluem anexos armazenados no banco e as chaves locais. Sessões são removidas, SMTP/recebimento são desativados, envios pendentes são cancelados e automações de alertas/preventivas ficam pausadas. A restauração exige `npm ci`, pois `node_modules` não faz parte da cópia.
 
 Para um ensaio operacional, restaure em outra pasta e portas livres, mantenha a instalação isolada, instale dependências e confira login, empresas, chamados e anexos. A suíte de testes inicia uma cópia restaurada com dados de teste; a rotina de integridade não substitui o ensaio no seu Windows Server. Nenhuma restauração foi executada no seu servidor real.
+
+## Atalho de atendimento · atualização 0.4.2
+
+O novo instalador do agente oferece o aplicativo **SERVITEC VSA — Abrir chamado**
+na Área de Trabalho e no menu Iniciar. Durante a instalação, informe também a URL
+base do Painel do Cliente, com sua porta ou domínio próprio. O instalador valida
+que o endereço corresponde ao painel externo. ENTER ignora a criação ou alteração
+do atalho, útil em servidores que precisam apenas do monitoramento.
+
+O aplicativo abre Edge/Chrome em modo de janela. O usuário faz login e vê o formulário
+quando sua conta tem permissão para abrir solicitações. A empresa vem da conta,
+e o token do agente não fica no aplicativo nem autentica usuários. Computadores
+já instalados precisam executar novamente o novo instalador. Veja o guia em
+`agents/windows/README.md`. A instalação nativa e os atalhos precisam de validação
+piloto no Windows; o fluxo web e a compilação foram validados no ambiente de desenvolvimento.

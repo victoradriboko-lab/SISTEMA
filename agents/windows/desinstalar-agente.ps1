@@ -7,5 +7,15 @@ if ($service) {
     & sc.exe delete ServitecAgent
     if ($LASTEXITCODE -ne 0) { throw 'Nao foi possivel remover o servico.' }
 }
+$clientExe = Join-Path $env:ProgramFiles 'ServitecClient\ServitecClient.exe'
+$shell = New-Object -ComObject WScript.Shell
+foreach ($folder in @([Environment]::GetFolderPath('CommonDesktopDirectory'),(Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'SERVITEC VSA'))) {
+    $link = Join-Path $folder 'SERVITEC VSA - Abrir chamado.lnk'
+    if (Test-Path -LiteralPath $link) {
+        $shortcut = $shell.CreateShortcut($link)
+        if ($shortcut.TargetPath -eq $clientExe) { Remove-Item -LiteralPath $link -Force }
+    }
+}
+Write-Host 'Atalhos de atendimento deste aplicativo removidos. Arquivos do cliente foram preservados.'
 Write-Host 'Servico removido. Arquivos e dados foram preservados em Program Files e ProgramData.'
 Write-Host 'No sistema, renove o token do equipamento para invalidar a credencial antiga.'

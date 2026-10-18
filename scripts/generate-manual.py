@@ -78,7 +78,7 @@ def word():
     p=d.add_paragraph(); text_run(p,'Da rotina de atendimento à visão do cliente.',16,color=MUTED)
     d.add_paragraph('Guia prático para administradores, operadores e clientes.\nChamados • Inventário • Monitoramento • Relatórios • Backups')
     d.add_paragraph('')
-    p=d.add_paragraph(); text_run(p,'EDIÇÃO 1.1',10,True,CYAN); text_run(p,'   |   OUTUBRO DE 2026',10,color=MUTED)
+    p=d.add_paragraph(); text_run(p,'EDIÇÃO 1.2',10,True,CYAN); text_run(p,'   |   OUTUBRO DE 2026',10,color=MUTED)
     d.add_paragraph('Documento editável em Word.\nTelas ilustradas com dados de demonstração.')
     for title,kicker,blocks in PAGES:
         d.add_page_break()
@@ -124,7 +124,7 @@ def word():
     d.core_properties.title='Manual do usuário — Sistema Informática SERVITEC VSA'
     d.core_properties.subject='Guia de utilização da plataforma'
     d.core_properties.author='SERVITEC VSA'; d.core_properties.keywords='manual, chamados, inventário, portal, backups'
-    d.core_properties.comments='Imagens e registros demonstrativos. Edição 1.1; Painel do Cliente em porta dedicada.'
+    d.core_properties.comments='Imagens e registros demonstrativos. Edição 1.2; versão 0.4.0 com contratos, SLA e segurança.'
     d.save(OUT/(NAME+'.docx'))
 
 
@@ -157,7 +157,7 @@ def pdf():
     coverstyles=[ParagraphStyle('BrandSmall',fontName='Arial-Bold',fontSize=12,leading=20,textColor=HexColor('#62DCEB')),ParagraphStyle('Brand',fontName='Arial-Bold',fontSize=40,leading=52,textColor=white),ParagraphStyle('VSA',fontName='Arial-Bold',fontSize=58,leading=68,textColor=HexColor('#62DCEB'))]
     cover=Table([[Paragraph('SISTEMA INFORMÁTICA',coverstyles[0])],[Paragraph('SERVITEC',coverstyles[1])],[Paragraph('VSA',coverstyles[2])],[Paragraph('TECNOLOGIA  /  ATENDIMENTO  /  GESTÃO',styles['head'])]],colWidths=[width])
     cover.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),HexColor('#'+NAVY)),('LEFTPADDING',(0,0),(-1,-1),23),('TOPPADDING',(0,0),(-1,0),25),('BOTTOMPADDING',(0,-1),(-1,-1),25)]))
-    story += [cover,Spacer(1,35),Paragraph('Manual do usuário',ParagraphStyle('CoverTitle',parent=styles['title'],fontSize=34,leading=40)),Spacer(1,12),para('Da rotina de atendimento à visão do cliente.','h'),Spacer(1,13),para('Guia prático para administradores, operadores e clientes.\nChamados • Inventário • Monitoramento • Relatórios • Backups'),Spacer(1,24),para('EDIÇÃO 1.1   |   OUTUBRO DE 2026','kicker'),para('Telas ilustradas com dados de demonstração.','small')]
+    story += [cover,Spacer(1,35),Paragraph('Manual do usuário',ParagraphStyle('CoverTitle',parent=styles['title'],fontSize=34,leading=40)),Spacer(1,12),para('Da rotina de atendimento à visão do cliente.','h'),Spacer(1,13),para('Guia prático para administradores, operadores e clientes.\nChamados • Inventário • Monitoramento • Relatórios • Backups'),Spacer(1,24),para('EDIÇÃO 1.2   |   OUTUBRO DE 2026','kicker'),para('Telas ilustradas com dados de demonstração.','small')]
     for title,kicker,blocks in PAGES:
         story += [PageBreak(),para(kicker,'kicker'),para(title,'title')]
         for item in blocks:

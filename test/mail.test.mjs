@@ -102,3 +102,23 @@ test('coleta retoma cursor após falha, deduplica e protege credencial; pausa re
   assert.ok(!JSON.stringify(audit).includes('abcdefghijklmnop'));
  }finally{mail.stop();db.close();rmSync(dir,{recursive:true,force:true});}
 });
+
+test('respostas por referência respeitam empresa; fila SMTP revalida vínculo e não repete entrega incerta',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'servitec-mail-thread-')),db=new DatabaseSync(join(dir,'sistema.db'));let notify,smtpFail=false;const sent=[],events=[];
+ db.exec("CREATE TABLE users(id INTEGER PRIMARY KEY,name TEXT,email TEXT,password TEXT,active INTEGER,client_id INTEGER,account_type TEXT); INSERT INTO users VALUES(1,'Admin','admin@example.test','pw',1,NULL,'internal'); CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT); CREATE TABLE clients(id INTEGER PRIMARY KEY,name TEXT); INSERT INTO clients VALUES(1,'Alpha'),(2,'Beta'); CREATE TABLE tickets(id INTEGER PRIMARY KEY,title TEXT,description TEXT,priority TEXT,status TEXT,status_since TEXT,created TEXT DEFAULT CURRENT_TIMESTAMP,client_id INTEGER,operator_id INTEGER,service_type TEXT); CREATE TABLE ticket_events(id INTEGER PRIMARY KEY,ticket_id INTEGER,actor_id INTEGER);");
+ const desk={setNotify:fn=>{notify=fn;},opened:id=>notify(id,'Chamado aberto'),event:(id,user,kind,text)=>{events.push({id,user,text});notify(id,text,user);}};
+ const mail=createMail({db,desk,dataDir:dir,body:async r=>r.data,json:(res,status,data)=>Object.assign(res,{status,data}),config:{allowed:()=>true,audit:()=>{}},check:(a,b)=>a===b,startScheduler:false,smtpFactory:async options=>({sendMail:async data=>{assert.equal(options.host,'smtp.gmail.com');assert.equal(options.tls.rejectUnauthorized,true);if(smtpFail)throw Error('Falha após DATA');sent.push(data);},close:()=>{}})});
+ const call=async(path,method,data)=>{const res={};await mail.handle({method,data,url:path},res,path,{id:1,name:'Admin',role:'admin'});return res;};
+ try{
+  await call('/api/config/mail','PUT',{address:'suporte@example.test',enabled:false,outgoingEnabled:true,intervalSeconds:60,appPassword:'abcdefghijklmnop',password:'pw'});
+  await call('/api/mail/senders','POST',{email:'ana@example.test',clientId:1,status:'approved'});await call('/api/mail/senders','POST',{email:'bia@example.test',clientId:2,status:'approved'});
+  const first=await mail.ingest(eml('ana@example.test','thread-first'));assert.equal(first.status,'ticket');assert.equal(db.prepare('SELECT count(*) n FROM email_outbox').get().n,1);
+  const reply=await mail.ingest(eml('ana@example.test','thread-reply','Re: Preciso de suporte','Já voltou a funcionar','In-Reply-To: <thread-first@example.test>\r\nReferences: <thread-first@example.test>\r\n'));
+  assert.equal(reply.ticket_id,first.ticket_id);assert.equal(db.prepare('SELECT count(*) n FROM tickets').get().n,1);assert.equal(db.prepare('SELECT count(*) n FROM email_outbox').get().n,1);
+  const foreign=await mail.ingest(eml('bia@example.test','thread-foreign','Re: #1','Outra empresa','In-Reply-To: <thread-first@example.test>\r\n'));assert.notEqual(foreign.ticket_id,first.ticket_id);assert.equal(db.prepare('SELECT client_id FROM tickets WHERE id=?').get(foreign.ticket_id).client_id,2);
+  await mail.dispatch();assert.equal(sent.length,1);assert.equal(sent[0].to,'ana@example.test');assert.ok(sent[0].messageId);assert.equal(db.prepare("SELECT count(*) n FROM email_outbox WHERE status='sent'").get().n,1);
+  await call('/api/mail/senders/2','PATCH',{status:'blocked'});await mail.dispatch();assert.equal(sent.length,1);assert.equal(db.prepare("SELECT count(*) n FROM email_outbox WHERE status='cancelled'").get().n,1);
+  notify(first.ticket_id,'Resposta pública',{id:1});smtpFail=true;await mail.dispatch();assert.equal(db.prepare("SELECT count(*) n FROM email_outbox WHERE status='uncertain'").get().n,1);smtpFail=false;await mail.dispatch();assert.equal(sent.length,1);
+  assert.ok(events.some(e=>e.text==='Já voltou a funcionar'));
+ }finally{mail.stop();db.close();rmSync(dir,{recursive:true,force:true});}
+});

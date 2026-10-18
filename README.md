@@ -318,3 +318,15 @@ A retenção só remove cópias concluídas e identificadas por este sistema na 
 4. Inicie o sistema, faça login novamente, confira os registros e revise o destino e a agenda antes de reativar os backups. A recuperação substitui os dados pelo momento da cópia.
 
 A pasta restaurada não contém os metadados Git. Para retomar atualizações pelo GitHub, prepare um checkout do código correspondente e migre os dados com o sistema parado. A validação automatizada desta entrega criou backups, conferiu hashes, retenção e agenda vencida e iniciou uma instalação restaurada com login e chamados preservados. Acesso a discos/compartilhamentos e permissões da tarefa devem ser conferidos no seu Windows Server.
+
+### Gestão de TI · versão 0.4.0
+
+A versão inclui ficha de empresas e contratos com SLA por prioridade/calendário,
+conversas e notas internas, anexos autenticados, apontamento de horas e custos,
+solicitações opcionais pelo portal, respostas de e-mail por referência, fila SMTP
+Gmail opt-in, alertas persistentes, preventivas, estimativa de rentabilidade,
+integração de abertura do RustDesk com autorização, TOTP, cofre e conferência de backups.
+
+Consulte o [guia de atualização e uso da versão 0.4.0](docs/melhorias-v0.4.0.md)
+para configuração, permissões, implantação no Windows Server e limites das integrações.
+O RustDesk e a conta real do Google Workspace precisam de configuração no servidor.

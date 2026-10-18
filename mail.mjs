@@ -4,15 +4,17 @@ import {join} from 'node:path';
 import {MAX_MAIL_BYTES,normalizeEmail,validSender,parseIncomingMail,openGmail} from './mail-receiver.mjs';
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const defaults={provider:'gmail',address:'',enabled:false,intervalSeconds:60};
-export function createMail({db,body,json,config,check,dataDir,receiver=openGmail,clock=()=>Date.now(),startScheduler=true}){
+export function createMail({db,body,json,config,check,dataDir,receiver=openGmail,clock=()=>Date.now(),startScheduler=true,desk=null,smtpFactory=async options=>(await import('nodemailer')).default.createTransport(options)}){
  db.exec(`CREATE TABLE IF NOT EXISTS email_messages(id INTEGER PRIMARY KEY,fingerprint TEXT NOT NULL UNIQUE,provider_key TEXT UNIQUE,mailbox TEXT NOT NULL DEFAULT '',sender TEXT NOT NULL,sender_name TEXT NOT NULL DEFAULT '',subject TEXT NOT NULL,text TEXT NOT NULL,message_id TEXT NOT NULL DEFAULT '',mail_date TEXT,attachments TEXT NOT NULL DEFAULT '[]',risk TEXT NOT NULL DEFAULT '',status TEXT NOT NULL,reason TEXT NOT NULL DEFAULT '',ticket_id INTEGER,client_id INTEGER,reviewed_by INTEGER,reviewed_at TEXT,received_at TEXT NOT NULL);
  CREATE INDEX IF NOT EXISTS email_messages_queue ON email_messages(status,id);
  CREATE INDEX IF NOT EXISTS email_messages_sender ON email_messages(sender,status);
- CREATE UNIQUE INDEX IF NOT EXISTS email_messages_ticket ON email_messages(ticket_id) WHERE ticket_id IS NOT NULL;
+ DROP INDEX IF EXISTS email_messages_ticket; CREATE INDEX IF NOT EXISTS email_ticket_lookup ON email_messages(ticket_id);
  CREATE TABLE IF NOT EXISTS email_senders(id INTEGER PRIMARY KEY,email TEXT NOT NULL UNIQUE,client_id INTEGER,status TEXT NOT NULL,updated_by INTEGER,updated_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS email_receiver_state(id INTEGER PRIMARY KEY CHECK(id=1),uid_validity TEXT,last_uid INTEGER NOT NULL DEFAULT 0,last_attempt TEXT,last_success TEXT,last_error TEXT NOT NULL DEFAULT '',last_count INTEGER NOT NULL DEFAULT 0);
  INSERT OR IGNORE INTO email_receiver_state(id) VALUES(1);
  CREATE TABLE IF NOT EXISTS email_receiver_lock(id INTEGER PRIMARY KEY,owner TEXT NOT NULL,expires INTEGER NOT NULL);`);
+ if(!db.prepare('PRAGMA table_info(email_messages)').all().some(c=>c.name==='reply_refs'))db.exec("ALTER TABLE email_messages ADD COLUMN reply_refs TEXT NOT NULL DEFAULT '[]'");
+ db.exec("CREATE TABLE IF NOT EXISTS email_outbox(id INTEGER PRIMARY KEY,ticket_id INTEGER,client_id INTEGER,recipient TEXT,subject TEXT,text TEXT,message_id TEXT UNIQUE,status TEXT DEFAULT 'pending',created TEXT DEFAULT CURRENT_TIMESTAMP,sent_at TEXT,error TEXT);");
  let running=false,changing=false,timer,stopped=false;
  const iso=()=>new Date(clock()).toISOString();
  const settings=()=>({...defaults,...JSON.parse(db.prepare("SELECT value FROM settings WHERE key='incoming-mail'").get()?.value||'{}')});
@@ -20,7 +22,7 @@ export function createMail({db,body,json,config,check,dataDir,receiver=openGmail
  const state=()=>db.prepare('SELECT * FROM email_receiver_state WHERE id=1').get();
  const counts=()=>Object.fromEntries(['pending','ticket','rejected','blocked','ignored'].map(status=>[status,db.prepare('SELECT count(*) n FROM email_messages WHERE status=?').get(status).n]));
  const busy=()=>running||changing||!!db.prepare('SELECT id FROM email_receiver_lock WHERE expires>?').get(clock());
- const publicSettings=()=>{const s=settings();return {provider:s.provider,address:s.address,enabled:s.enabled,intervalSeconds:s.intervalSeconds,hasPassword:!!s.secret};};
+ const publicSettings=()=>{const s=settings();return {provider:s.provider,address:s.address,enabled:s.enabled,intervalSeconds:s.intervalSeconds,outgoingEnabled:s.outgoingEnabled===true,hasPassword:!!s.secret};};
  function key(create=false){const path=join(dataDir,'email-secret.key');try{const value=readFileSync(path);if(value.length!==32)throw Error('Invalid key');return value;}catch(error){if(error.code!=='ENOENT'||!create)fail('A chave local do e-mail não está disponível. Restaure o backup completo ou cadastre a senha de app novamente.');const value=randomBytes(32);try{writeFileSync(path,value,{flag:'wx',mode:0o600});return value;}catch(error){if(error.code==='EEXIST')return key();throw error;}}}
  function encrypt(value){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key(true),iv),data=Buffer.concat([cipher.update(value,'utf8'),cipher.final()]);return [iv,cipher.getAuthTag(),data].map(v=>v.toString('base64')).join('.');}
  function credentials(s){try{const [iv,tag,data]=s.secret.split('.').map(v=>Buffer.from(v,'base64')),decipher=createDecipheriv('aes-256-gcm',key(),iv);decipher.setAuthTag(tag);return {address:s.address,appPassword:Buffer.concat([decipher.update(data),decipher.final()]).toString('utf8')};}catch(error){if(error.status)throw error;fail('Não foi possível ler a credencial do e-mail. Cadastre a senha de app novamente.');}}
@@ -32,11 +34,13 @@ export function createMail({db,body,json,config,check,dataDir,receiver=openGmail
  function transaction(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(error){db.exec('ROLLBACK');throw error;}}
  function convert(row,clientId,user=null){
   validateClient(clientId);
+  const refs=JSON.parse(row.reply_refs||'[]');let linked;for(const ref of refs){linked=db.prepare('SELECT t.id FROM tickets t WHERE t.client_id=? AND (EXISTS(SELECT 1 FROM email_messages m WHERE m.ticket_id=t.id AND m.message_id=?) OR EXISTS(SELECT 1 FROM email_outbox o WHERE o.ticket_id=t.id AND o.message_id=?))').get(clientId,ref,ref);if(linked)break;}
+  if(linked){db.prepare("UPDATE email_messages SET status='ticket',ticket_id=?,client_id=?,reviewed_by=?,reviewed_at=?,reason='Resposta vinculada por referência' WHERE id=?").run(linked.id,clientId,user?.id??null,iso(),row.id);desk?.event(linked.id,{name:row.sender},'message',row.text,true);return linked.id;}
   const metadata=`Recebido por e-mail\nRemetente: ${row.sender}\nRecebido em: ${row.received_at}\n\n`,attachments=JSON.parse(row.attachments),suffix=attachments.length?'\n\nAnexos na caixa original (não importados): '+attachments.map(a=>a.name).join(', '):'',remaining=5000-metadata.length-suffix.slice(0,1200).length;
   const truncated=row.text.length>remaining,description=metadata+row.text.slice(0,Math.max(0,remaining-120))+(truncated?'\n[Texto resumido. Conteúdo completo na Central de e-mails.]':'')+suffix.slice(0,1200);
   const ticketId=Number(db.prepare("INSERT INTO tickets(title,description,priority,status,status_since,client_id,operator_id,service_type) VALUES(?,?,'Média','Aberto',CURRENT_TIMESTAMP,?,NULL,NULL)").run(row.subject,description,clientId).lastInsertRowid);
   db.prepare("UPDATE email_messages SET status='ticket',ticket_id=?,client_id=?,reviewed_by=?,reviewed_at=?,reason=? WHERE id=? AND status='pending'").run(ticketId,clientId,user?.id??null,iso(),user?'Liberado pelo operador':'Remetente já vinculado à empresa',row.id);
-  config.audit(user,'mail.ticket',`E-mail #${row.id} convertido no chamado #${ticketId}, empresa #${clientId}`);return ticketId;
+  desk?.opened(ticketId,user);desk?.event(ticketId,{name:row.sender},'message',row.text,true);config.audit(user,'mail.ticket',`E-mail #${row.id} convertido no chamado #${ticketId}, empresa #${clientId}`);return ticketId;
  }
  async function ingest(source,{providerKey=null,mailbox=settings().address}={}){
   if(providerKey){const old=db.prepare('SELECT id,status,ticket_id FROM email_messages WHERE provider_key=?').get(providerKey);if(old)return {...old,duplicate:true};}
@@ -45,6 +49,7 @@ export function createMail({db,body,json,config,check,dataDir,receiver=openGmail
    const existing=db.prepare('SELECT id,status,ticket_id FROM email_messages WHERE fingerprint=?').get(parsed.fingerprint);if(existing)return {...existing,duplicate:true};
    const sender=db.prepare('SELECT * FROM email_senders WHERE email=?').get(parsed.sender),blocked=sender?.status==='blocked',status=parsed.ignored?'ignored':blocked?'blocked':'pending',reason=parsed.ignored|| (blocked?'Remetente bloqueado':parsed.risk==='provider_warning'?'O provedor sinalizou autenticação ou spam: exige revisão':parsed.risk==='content_review'?'Conteúdo HTML não convertido: confira o e-mail original antes de liberar':parsed.risk==='invalid_sender'?'Remetente ausente ou ambíguo: não é possível vincular':'Aguardando aprovação do remetente');
    const id=Number(db.prepare('INSERT INTO email_messages(fingerprint,provider_key,mailbox,sender,sender_name,subject,text,message_id,mail_date,attachments,risk,status,reason,received_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(parsed.fingerprint,providerKey,mailbox,parsed.sender,parsed.senderName,parsed.subject,parsed.text,parsed.messageId,parsed.mailDate,JSON.stringify(parsed.attachments),parsed.risk,status,reason,iso()).lastInsertRowid);
+   db.prepare('UPDATE email_messages SET reply_refs=? WHERE id=?').run(JSON.stringify(parsed.references),id);
    let ticketId=null;
    if(status==='pending'&&!parsed.risk&&sender?.status==='approved'&&db.prepare('SELECT id FROM clients WHERE id=?').get(sender.client_id)){ticketId=convert(db.prepare('SELECT * FROM email_messages WHERE id=?').get(id),sender.client_id);}
    return {id,status:ticketId?'ticket':status,ticket_id:ticketId,duplicate:false};
@@ -71,7 +76,29 @@ export function createMail({db,body,json,config,check,dataDir,receiver=openGmail
   }catch(error){const message=connectionError(error);db.prepare('UPDATE email_receiver_state SET last_error=? WHERE id=1').run(message);if(error.mailCode==='MAILBOX_CHANGED')save({...s,enabled:false});throw Object.assign(Error(message),{status:400});}
   finally{await connection?.close();clearInterval(renew);db.prepare('DELETE FROM email_receiver_lock WHERE owner=?').run(owner);running=false;}
  }
+
+ function enqueue(ticketId,message,user){
+  const s=settings();if(!s.outgoingEnabled)return;
+  const ticket=db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);if(!ticket?.client_id)return;
+  const recipients=db.prepare("SELECT DISTINCT sender FROM email_messages m JOIN email_senders s ON s.email=m.sender WHERE m.ticket_id=? AND m.client_id=? AND s.client_id=? AND s.status='approved'").all(ticketId,ticket.client_id,ticket.client_id);
+  if(user&&!user.id)return;
+  if(user?.account_type==='client'&&message!=='Chamado aberto')return;
+  const portalRecipients=db.prepare("SELECT DISTINCT u.email FROM ticket_events e JOIN users u ON u.id=e.actor_id WHERE e.ticket_id=? AND u.client_id=? AND u.active=1 AND u.account_type='client'").all(ticketId,ticket.client_id);for(const u of portalRecipients)if(!recipients.some(r=>r.sender===u.email))recipients.push({sender:u.email});
+  for(const r of recipients)db.prepare('INSERT INTO email_outbox(ticket_id,client_id,recipient,subject,text,message_id) VALUES(?,?,?,?,?,?)').run(ticketId,ticket.client_id,r.sender,`[SERVITEC #${ticketId}] ${ticket.title}`,message,`<${randomUUID()}@servitec-vsa.local>`);
+ }
+ desk?.setNotify(enqueue);
+ async function dispatch(){
+  const s=settings();if(!s.outgoingEnabled||!s.secret)return;
+  const row=db.prepare("SELECT * FROM email_outbox WHERE status='pending' ORDER BY id LIMIT 1").get();if(!row)return;
+  const authorized=db.prepare("SELECT 1 FROM email_senders WHERE email=? AND client_id=? AND status='approved'").get(row.recipient,row.client_id),ticket=db.prepare('SELECT client_id FROM tickets WHERE id=?').get(row.ticket_id);
+  const portalAuthorized=db.prepare("SELECT 1 FROM users WHERE email=? AND client_id=? AND account_type='client' AND active=1").get(row.recipient,row.client_id);if((!authorized&&!portalAuthorized)||ticket?.client_id!==row.client_id){db.prepare("UPDATE email_outbox SET status='cancelled',error='Vínculo de empresa alterado' WHERE id=?").run(row.id);return;}
+  if(!db.prepare("UPDATE email_outbox SET status='sending' WHERE id=? AND status='pending'").run(row.id).changes)return;
+  let transport;try{const cred=credentials(s);transport=await smtpFactory({host:'smtp.gmail.com',port:465,secure:true,auth:{user:cred.address,pass:cred.appPassword},connectionTimeout:15000,socketTimeout:30000,tls:{minVersion:'TLSv1.2',rejectUnauthorized:true}});const ref=db.prepare("SELECT message_id FROM email_messages WHERE ticket_id=? AND message_id<>'' ORDER BY id DESC LIMIT 1").get(row.ticket_id)?.message_id;await transport.sendMail({from:cred.address,to:row.recipient,subject:row.subject,text:row.text,messageId:row.message_id,inReplyTo:ref,references:ref});db.prepare("UPDATE email_outbox SET status='sent',sent_at=? WHERE id=?").run(iso(),row.id);}catch{db.prepare("UPDATE email_outbox SET status='uncertain',error='Confira a caixa Enviados antes de qualquer reenvio manual.' WHERE id=?").run(row.id);}finally{transport?.close();}
+ }
+ let outgoingTimer;if(startScheduler){outgoingTimer=setInterval(()=>dispatch().catch(()=>{}),15000);outgoingTimer.unref();}
+
  async function handle(req,res,path,user){
+  if(path==='/api/mail/outbox'&&req.method==='GET'){requireAdmin(user);json(res,200,db.prepare('SELECT id,ticket_id,recipient,status,created,sent_at,error FROM email_outbox ORDER BY id DESC LIMIT 100').all());return true;}
   if(path!=='/api/config/mail'&&path!=='/api/config/mail/test'&&!path.startsWith('/api/mail/'))return false;
   if(path.startsWith('/api/config/mail')){
    requireAdmin(user);
@@ -80,10 +107,10 @@ export function createMail({db,body,json,config,check,dataDir,receiver=openGmail
     const b=await body(req);confirm(user,b.password);if(busy())fail('Aguarde a sincronização atual antes de alterar a caixa',409);
     const old=settings(),address=normalizeEmail(b.address),enabled=b.enabled,intervalSeconds=b.intervalSeconds;
     if(!validSender(address)||typeof enabled!=='boolean'||!Number.isInteger(intervalSeconds)||intervalSeconds<60||intervalSeconds>3600)fail('Informe e-mail válido e intervalo de 60 a 3600 segundos');
-    const next={provider:'gmail',address,enabled,intervalSeconds,secret:old.address===address?old.secret:undefined};
+    const next={provider:'gmail',address,enabled,intervalSeconds,outgoingEnabled:b.outgoingEnabled===true,secret:old.address===address?old.secret:undefined};
     if(b.appPassword!==undefined&&b.appPassword!==''){if(typeof b.appPassword!=='string'||b.appPassword.length>256)fail('Senha de app inválida');const secret=b.appPassword.replace(/\s/g,'');if(!/^[a-zA-Z0-9]{16,256}$/.test(secret))fail('Informe a senha de app gerada pelo Google, com pelo menos 16 caracteres');next.secret=encrypt(secret);}
-    if(b.clearPassword===true){if(enabled)fail('Desative o recebimento antes de remover a credencial');delete next.secret;}
-    if(enabled&&!next.secret)fail('Cadastre a senha de app antes de ativar');
+    if(b.clearPassword===true){if(enabled||next.outgoingEnabled)fail('Desative recebimento e envio antes de remover a credencial');delete next.secret;}
+    if((enabled||next.outgoingEnabled)&&!next.secret)fail('Cadastre a senha de app antes de ativar');
     if(b.startFromNow!==undefined&&typeof b.startFromNow!=='boolean')fail('Opção de início da coleta inválida');if(b.startFromNow&&!enabled)fail('Ative o recebimento para reiniciar o ponto de coleta');
     const changed=old.address!==address;changing=true;
     try{
@@ -96,7 +123,7 @@ export function createMail({db,body,json,config,check,dataDir,receiver=openGmail
    fail('Rota não encontrada',404);
   }
   requireRead(user);
-  if(path==='/api/mail/status'&&req.method==='GET'){const s=settings();json(res,200,{configured:!!s.secret,address:s.address,enabled:s.enabled,running:busy(),state:state(),counts:counts()});return true;}
+  if(path==='/api/mail/status'&&req.method==='GET'){const s=settings();json(res,200,{outbox:db.prepare("SELECT status,count(*) AS total FROM email_outbox GROUP BY status").all(),configured:!!s.secret,address:s.address,enabled:s.enabled,running:busy(),state:state(),counts:counts()});return true;}
   if(path==='/api/mail/sync'&&req.method==='POST'){requireWrite(user);json(res,200,await sync(user));return true;}
   if(path==='/api/mail/import'&&req.method==='POST'){
    requireWrite(user);const b=await body(req);if(typeof b.source!=='string'||b.source.length>700000||!/^[A-Za-z0-9+/]*={0,2}$/.test(b.source))fail('Selecione um arquivo .eml de até 512 KB');const raw=Buffer.from(b.source,'base64');if(raw.length>512*1024||!raw.length)fail('Selecione um arquivo .eml de até 512 KB');const result=await ingest(raw,{mailbox:''});config.audit(user,'mail.import',`E-mail #${result.id} importado${result.duplicate?' (já existente)':''}`);json(res,200,result);return true;
@@ -140,5 +167,5 @@ export function createMail({db,body,json,config,check,dataDir,receiver=openGmail
  }
  if(!settings().secret)key(true);
  if(startScheduler){timer=setInterval(()=>{if(stopped||busy())return;const s=settings(),last=state().last_attempt;if(s.enabled&&(!last||clock()-Date.parse(last)>=s.intervalSeconds*1000))sync().catch(()=>{});},15000);timer.unref();}
- return {handle,ingest,sync,stop(){stopped=true;clearInterval(timer);}};
+ return {handle,ingest,sync,dispatch,stop(){stopped=true;clearInterval(timer);clearInterval(outgoingTimer);}};
 }

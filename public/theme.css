@@ -98,3 +98,17 @@ button.theme-toggle,.customer-actions button.theme-toggle{display:inline-flex;al
 :root[data-surface=internal][data-theme=light] aside nav button.active svg{color:var(--cyan)}
 :root[data-surface=internal][data-theme=light] .bar-purple{fill:#8066bf}
 :root[data-surface=internal][data-theme=light] .bar-green{fill:#2f9272}
+
+/* Detalhes do atendimento e formulários de gestão. */
+.desk-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+#service-content fieldset { min-width: 0; border: 0; padding: 0; }
+#service-content form, #desk-message, #desk-file, #desk-work { max-width: 900px; }
+#service-content textarea, #desk-message textarea { min-height: 100px; }
+#service-content article, #desk-message article { border-bottom: 1px solid var(--border, #293354); padding: 14px 0; }
+#service-content pre, #mfa-result code { white-space: pre-wrap; overflow-wrap: anywhere; }
+#service-content fieldset { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px 20px; }
+#service-content fieldset > h2, #service-content fieldset > p, #service-content fieldset > button,
+#service-content fieldset > label:has(textarea), #service-content fieldset > label:has(input[type=checkbox]) { grid-column: 1 / -1; }
+#service-content input[type=checkbox], #desk-file input[type=checkbox] { width: auto; display: inline-block; margin-right: 8px; }
+#service-content label:has(input[type=checkbox]), #desk-file label:has(input[type=checkbox]) { display: flex; align-items: center; gap: 8px; }
+@media (max-width:600px) { #service-content fieldset { grid-template-columns: minmax(0,1fr); } }

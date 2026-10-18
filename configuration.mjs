@@ -6,6 +6,10 @@ import {DatabaseSync} from 'node:sqlite';
 import {execFileSync} from 'node:child_process';
 
 export const permissionCatalog = [
+  {key:'contracts.manage',label:'Gerenciar contratos, SLA e preventivas',group:'Gestão'},
+  {key:'finance.read',label:'Consultar rentabilidade e custos',group:'Gestão'},
+  {key:'remote.use',label:'Solicitar acesso remoto autorizado',group:'Gestão'},
+  {key:'vault.manage',label:'Cadastrar e revelar credenciais do cofre',group:'Gestão'},
   {key:'tickets.read',label:'Visualizar chamados',group:'Chamados'},
   {key:'tickets.write',label:'Criar/alterar chamados e aprovar e-mails e remetentes',group:'Chamados'},
   {key:'assets.read',label:'Consultar equipamentos',group:'Equipamentos'},
@@ -22,7 +26,7 @@ export const permissionCatalog = [
 const defaults={admin:permissionCatalog.map(p=>p.key),technician:['tickets.read','tickets.write','assets.read','assets.write','monitor.read'],viewer:['tickets.read','assets.read','monitor.read']};
 const companyFields=['name','legalName','cnpj','registration','address','city','phone','email','site'];
 const emptyCompany=()=>Object.fromEntries(companyFields.map(f=>[f,f==='name'?'Servitec':'']));
-const dependencies={'tickets.write':'tickets.read','assets.write':'assets.read','monitor.read':'assets.read','imports.manage':'assets.write'};
+const dependencies={'remote.use':'assets.read','vault.manage':'tickets.read','contracts.manage':'tickets.read','tickets.write':'tickets.read','assets.write':'assets.read','monitor.read':'assets.read','imports.manage':'assets.write'};
 function error(message,status=400){return Object.assign(new Error(message),{status});}
 
 // RFC 4180-style CSV, with comma or semicolon and optional UTF-8 BOM.
@@ -161,10 +165,11 @@ export function createConfiguration({db,json,body,check,root}){
         audit(user,'system.backup','Backup do banco solicitado');db.prepare('VACUUM INTO ?').run(file);
         const copy=new DatabaseSync(file);try{
           copy.exec('DELETE FROM sessions; PRAGMA journal_mode=DELETE;');
-          const schedule=copy.prepare("SELECT value FROM settings WHERE key='backup-schedule'").get();if(schedule)copy.prepare("UPDATE settings SET value=? WHERE key='backup-schedule'").run(JSON.stringify({...JSON.parse(schedule.value),enabled:false}));
+          const schedule=copy.prepare("SELECT value FROM settings WHERE key='backup-schedule'").get();if(schedule)copy.prepare("UPDATE settings SET value=? WHERE key='backup-schedule'").run(JSON.stringify({...JSON.parse(schedule.value),enabled:false,outgoingEnabled:false}));
           copy.prepare("DELETE FROM settings WHERE key IN ('backup-next-run','backup-last-date')").run();
           if(copy.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='backup_lease'").get())copy.exec('DELETE FROM backup_lease');
-          const incoming=copy.prepare("SELECT value FROM settings WHERE key='incoming-mail'").get();if(incoming)copy.prepare("UPDATE settings SET value=? WHERE key='incoming-mail'").run(JSON.stringify({...JSON.parse(incoming.value),enabled:false}));
+          if(copy.prepare("SELECT name FROM sqlite_master WHERE name='service_automation'").get())copy.exec('UPDATE service_automation SET enabled=0');if(copy.prepare("SELECT name FROM sqlite_master WHERE name='email_outbox'").get())copy.exec("UPDATE email_outbox SET status='cancelled' WHERE status IN ('pending','sending')");
+          const incoming=copy.prepare("SELECT value FROM settings WHERE key='incoming-mail'").get();if(incoming)copy.prepare("UPDATE settings SET value=? WHERE key='incoming-mail'").run(JSON.stringify({...JSON.parse(incoming.value),enabled:false,outgoingEnabled:false}));
           if(copy.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='email_receiver_lock'").get())copy.exec('DELETE FROM email_receiver_lock');
           copy.exec('VACUUM');
         }finally{copy.close();}

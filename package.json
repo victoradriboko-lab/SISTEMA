@@ -1,11 +1,11 @@
 {
   "name": "sistema-ti",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check configuration.mjs && node --check public/app.js && node --check public/settings.js && node --check telemetry.mjs && node --check public/monitor.js && node --check clients.mjs && node --check public/dashboard.js && node --check reports.mjs && node --check public/reports.js && node --check report-models.mjs && node --check backups.mjs && node --check public/backup-settings.js && node --check client-access.mjs && node --check client-portal.mjs && node --check public/client-access.js && node --check public/client-portal.js && node --check public/customer-app.js && node --check public/theme.js && node --check mail.mjs && node --check mail-receiver.mjs && node --check public/mail.js && node --check public/mail-settings.js",
+    "check": "node --check server.mjs && node --check configuration.mjs && node --check public/app.js && node --check public/settings.js && node --check telemetry.mjs && node --check public/monitor.js && node --check clients.mjs && node --check public/dashboard.js && node --check reports.mjs && node --check public/reports.js && node --check report-models.mjs && node --check backups.mjs && node --check public/backup-settings.js && node --check client-access.mjs && node --check client-portal.mjs && node --check public/client-access.js && node --check public/client-portal.js && node --check public/customer-app.js && node --check public/theme.js && node --check mail.mjs && node --check mail-receiver.mjs && node --check public/mail.js && node --check public/mail-settings.js && node --check service-desk.mjs && node --check operations.mjs && node --check security.mjs && node --check public/desk.js && node --check public/service-ui.js && node --check public/security-ui.js",
     "test": "node --test"
   },
   "engines": {
@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "imapflow": "2.5.5",
-    "mailparser": "3.9.46"
+    "luxon": "3.7.2",
+    "mailparser": "3.9.46",
+    "nodemailer": "10.1.7"
   }
 }

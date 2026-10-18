@@ -206,3 +206,11 @@ Em **Relatórios → Chamados por operador**, consulte totais de abertos, em ate
 Escolha **Operador responsável** em Novo chamado ou na coluna correspondente da lista. Só usuários ativos com `tickets.write` podem receber novas atribuições. A alteração exige essa mesma permissão e preserva o cliente, o status e o tempo naquela situação. Operadores desativados ou que perderam a permissão continuam nos relatórios dos chamados atribuídos a eles, mas não podem receber novos chamados.
 
 Chamados existentes recebem operador vazio na migração e aparecem em **Sem operador** até serem atribuídos. O relatório considera o responsável atual, sem reconstruir atribuições anteriores. Nenhum chamado é atribuído automaticamente ao usuário que o criou.
+
+#### Atendimentos internos e externos
+
+O campo **Tipo de atendimento** aceita **Interno** e **Externo**, no cadastro e na lista de chamados. Ao mudar um chamado ainda não classificado para **Em atendimento** ou **Resolvido** pela interface, o sistema solicita a modalidade antes de salvar a mudança. Cancelar mantém a situação anterior. Alterar apenas a modalidade preserva o cliente, o operador, o status e o tempo na situação; a operação exige `tickets.write`.
+
+Em **Relatórios → Internos e externos**, compare as modalidades por quantidade, situação e participação percentual no total filtrado. É possível apresentar apenas internos, apenas externos ou ambos, com filtros por cliente, operador, período de criação, status e prioridade, além de CSV e impressão/PDF. A participação considera todos os registros do filtro, inclusive os não classificados. O filtro de modalidade também está disponível nos outros relatórios de chamados.
+
+A migração preserva os registros e deixa os antigos como **Não informado**, sem presumir uma modalidade. Eles podem ser classificados pela lista. A API mantém o campo opcional para compatibilidade e valida as modalidades quando informadas; a solicitação de classificação ao iniciar/concluir ocorre na interface. O relatório considera a classificação atual de cada chamado, sem contar múltiplas visitas ou alterações de modalidade como atendimentos separados.

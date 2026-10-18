@@ -7,7 +7,7 @@ import {execFileSync} from 'node:child_process';
 
 export const permissionCatalog = [
   {key:'tickets.read',label:'Visualizar chamados',group:'Chamados'},
-  {key:'tickets.write',label:'Criar chamados e alterar status, cliente e operador',group:'Chamados'},
+  {key:'tickets.write',label:'Criar chamados e alterar status, cliente, operador e tipo de atendimento',group:'Chamados'},
   {key:'assets.read',label:'Consultar equipamentos',group:'Equipamentos'},
   {key:'assets.write',label:'Cadastrar equipamentos e renovar tokens de agentes',group:'Equipamentos'},
   {key:'monitor.read',label:'Visualizar monitoramento',group:'Monitoramento'},

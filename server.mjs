@@ -1,3 +1,5 @@
+import {createClientAccess} from './client-access.mjs';
+import {createClientPortal} from './client-portal.mjs';
 import {createBackups} from './backups.mjs';
 import {createReportModels} from './report-models.mjs';
 import {createReports} from './reports.mjs';
@@ -18,9 +20,11 @@ db.exec(`PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS users(id INTEGER PR
 const columns = db.prepare('PRAGMA table_info(users)').all().map(c => c.name);
 if (!columns.includes('role')) db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'admin'");
 if (!columns.includes('active')) db.exec('ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
+if(!columns.includes('account_type'))db.exec("ALTER TABLE users ADD COLUMN account_type TEXT NOT NULL DEFAULT 'internal'");
+if(!columns.includes('client_id'))db.exec('ALTER TABLE users ADD COLUMN client_id INTEGER');
 const validPassword = value => typeof value === 'string' && value.length >= 12 && value.length <= 256;
 const validEmail = value => typeof value === 'string' && value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-const publicUsers = () => db.prepare('SELECT id,name,email,role,active FROM users ORDER BY name,id').all();
+const publicUsers = () => db.prepare("SELECT id,name,email,role,active FROM users WHERE account_type='internal' ORDER BY name,id").all();
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));};
 const hash=(password,salt=randomBytes(16).toString('hex'))=>salt+':'+scryptSync(password,salt,64).toString('hex');
 const check=(password,stored)=>{const [salt,value]=stored.split(':');return timingSafeEqual(Buffer.from(hash(password,salt).split(':')[1],'hex'),Buffer.from(value,'hex'));};
@@ -31,6 +35,8 @@ const backups=createBackups({db,body,json,config,check,root,dataDir});
 const clients=createClients({db,body,json,config,check});
 const reportModels=createReportModels({db,body,json,config});
 const reports=createReports({db,json,config});
+const clientAccess=createClientAccess({db,body,json,config,hash,validEmail,validPassword});
+const clientPortal=createClientPortal({db,json,config});
 const telemetry=createTelemetry({db,body,json,config,root,clients});
 http.createServer(async(req,res)=>{try{
 res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','same-origin');
@@ -48,9 +54,9 @@ const created=db.prepare('INSERT INTO users(name,email,password) VALUES(?,?,?)')
 if(path==='/api/login'&&req.method==='POST'){const b=await body(req);const user=db.prepare('SELECT * FROM users WHERE email=?').get(str(b.email).toLowerCase());if(!user||!user.active||typeof b.password!=='string'||b.password.length>256||!check(b.password,user.password)){config.audit(null,'auth.failed','Tentativa de login recusada');return json(res,401,{error:'Credenciais inválidas'});}config.audit(user,'auth.login','Login realizado');const token=randomBytes(32).toString('hex');db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(token,user.id,Date.now()+28800000);res.setHeader('Set-Cookie',`session=${token}; HttpOnly; SameSite=Strict; Path=/${process.env.COOKIE_SECURE==='1'?'; Secure':''}`);return json(res,200,{ok:true});}
 if(await telemetry.publicRoute(req,res,path))return;
 if(path.startsWith('/api/')){
-const token=(req.headers.cookie||'').match(/(?:^|;\s*)session=([a-f0-9]+)/)?.[1];const session=db.prepare('SELECT users.id,users.name,users.email,users.role FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>? AND users.active=1').get(token||'',Date.now());if(!session)return json(res,401,{error:'Entre para continuar'});
+const token=(req.headers.cookie||'').match(/(?:^|;\s*)session=([a-f0-9]+)/)?.[1];const session=db.prepare('SELECT users.id,users.name,users.email,users.role,users.account_type,users.client_id,(SELECT name FROM clients WHERE id=users.client_id) AS client_name FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>? AND users.active=1').get(token||'',Date.now());if(!session)return json(res,401,{error:'Entre para continuar'});
 if(path==='/api/logout'&&req.method==='POST'){db.prepare('DELETE FROM sessions WHERE token=?').run(token);config.audit(session,'auth.logout','Logout realizado');res.setHeader('Set-Cookie','session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return json(res,200,{ok:true});}
-if(path==='/api/me'&&req.method==='GET')return json(res,200,{...session,permissions:config.permissions(session.role)});
+if(path==='/api/me'&&req.method==='GET')return json(res,200,{...session,permissions:session.account_type==='client'||session.role==='client_viewer'?['portal.read']:config.permissions(session.role)});
 if(path==='/api/me/password'&&req.method==='POST'){
 const b=await body(req);
 const user=db.prepare('SELECT password FROM users WHERE id=?').get(session.id);
@@ -60,6 +66,8 @@ db.prepare('UPDATE users SET password=? WHERE id=?').run(hash(b.password),sessio
 db.prepare('DELETE FROM sessions WHERE user_id=?').run(session.id);
 config.audit(session,'users.password','Própria senha alterada');return json(res,200,{ok:true,reauthenticate:true});
 }
+if(session.account_type==='client'||session.role==='client_viewer'){await clientPortal.handle(req,res,path,session);return;}
+if(await clientAccess.handle(req,res,path,session))return;
 if(await backups.handle(req,res,path,session))return;
 if(await reportModels.handle(req,res,path,session))return;
 if(await reports.handle(req,res,path,session))return;
@@ -79,7 +87,7 @@ config.audit(session,'users.create',`Usuário #${result.lastInsertRowid} cadastr
 }
 if(/^\/api\/users\/\d+$/.test(path)&&req.method==='PATCH'){
 const b=await body(req),id=Number(path.split('/').pop());
-const user=db.prepare('SELECT id,name,email,role,active FROM users WHERE id=?').get(id);
+const user=db.prepare("SELECT id,name,email,role,active FROM users WHERE id=? AND account_type='internal'").get(id);
 if(!user)return json(res,404,{error:'Usuário não encontrado'});
 const name=b.name===undefined?user.name:str(b.name);
 const email=b.email===undefined?user.email:str(b.email).toLowerCase();
@@ -117,6 +125,6 @@ config.audit(session,'tickets.update',`Chamado #${id}: ${status}, cliente ${clie
 
 if(path==='/api/assets'&&req.method==='POST'){const b=await body(req);if(!str(b.name))return json(res,400,{error:'Nome obrigatório'});const code=str(b.code,81)||null;if(code&&code.length>80)return json(res,400,{error:'Código deve ter até 80 caracteres'});if(code&&db.prepare('SELECT id FROM assets WHERE code=?').get(code))return json(res,409,{error:'Código de equipamento já cadastrado'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const token=randomBytes(32).toString('hex');const row=db.prepare('INSERT INTO assets(name,owner,os,token,code,client_id) VALUES(?,?,?,?,?,?)').run(str(b.name),str(b.owner),str(b.os),token,code,clientId);config.audit(session,'assets.create',`Equipamento #${row.lastInsertRowid} cadastrado`);return json(res,201,{id:Number(row.lastInsertRowid),...(clientId?{}:{token})});}
 return json(res,404,{error:'Rota não encontrada'});}
-if(req.method==='GET'&&['/','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/style.css'].includes(path)){const name=path==='/'?'index.html':path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
+if(req.method==='GET'&&['/','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/client-portal.js','/style.css'].includes(path)){const name=path==='/'?'index.html':path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
 json(res,404,{error:'Não encontrado'});
 }catch(err){json(res,err.status||400,{error:err.status?err.message:'Não foi possível processar a solicitação'});}}).listen(Number(process.env.PORT||3000),process.env.HOST||'127.0.0.1',()=>console.log('SISTEMA iniciado na porta '+(process.env.PORT||3000)));

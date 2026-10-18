@@ -240,6 +240,20 @@ Em **Salvar filtros e apresentação como modelo pessoal**, informe um nome. O m
 
 Os modelos ficam no banco de dados, vinculados ao usuário, e continuam disponíveis após recarregar a página ou acessar de outro computador. Cada usuário vê apenas os próprios modelos e os tipos que pode consultar. Há um limite de cinquenta modelos por usuário; para alterar um modelo existente, salve com outro nome ou exclua a versão anterior. A migração apenas acrescenta a tabela de modelos e preserva os dados existentes.
 
+### Portal de clientes: acesso somente à própria empresa
+
+Como administrador, abra **Acessos de clientes** no menu principal e clique em **Novo acesso**. Informe nome, e-mail, senha e a empresa autorizada. Cadastre a empresa previamente em **Equipamentos → Nova empresa/token**, se necessário. É possível criar vários acessos para a mesma empresa.
+
+O cliente entra pelo mesmo endereço e pela mesma tela de login da plataforma. Entregue as credenciais pelo seu canal habitual; o cadastro não envia mensagens automaticamente. Use esse menu para clientes: o perfil interno **Visualizador** continua destinado à equipe e não restringe os dados a uma empresa.
+
+O portal apresenta **Dashboard** e **Meus chamados**, com totais por situação, gráficos de barras ou disco por mês, situação, modalidade e prioridade, filtros por período, situação e texto, detalhes e paginação de vinte chamados. A atualização automática ocorre a cada dez segundos enquanto a página está visível. O acesso permite apenas consulta e alteração da própria senha; não permite criar ou editar chamados, acessar equipamentos, usuários, configurações ou relatórios internos.
+
+Cada acesso consulta exclusivamente os chamados vinculados à empresa escolhida, com validação no servidor em todas as consultas. Vincule os chamados à empresa no cadastro ou na lista interna: registros antigos sem empresa não aparecem no portal. Alterar filtros ou endereços manualmente não permite consultar outra empresa.
+
+Em **Acessos de clientes → Editar / redefinir senha**, o administrador pode alterar a empresa, redefinir a senha ou desativar o acesso. Salvar uma alteração encerra as sessões desse cliente; ele precisa entrar novamente com os dados atuais. O perfil do portal é fixo e não recebe permissões internas pelo editor de perfis.
+
+A atualização acrescenta os campos de tipo de conta e empresa ao cadastro de usuários, preservando os usuários internos existentes. Os acessos ficam no banco e são incluídos nos backups já disponíveis.
+
 ### Backup completo e agendado no servidor
 
 Como administrador, abra **Configurações → Backups**. O agendamento inicia desativado. Informe uma pasta absoluta **no servidor**, fora da instalação e da pasta de dados; por exemplo, `D:\Backups\SERVITEC` se a aplicação estiver em `C:\Servitec\SISTEMA`. A pasta pode ser criada ao salvar. Para compartilhamento de rede, use um caminho UNC como `\\servidor-arquivos\backups\SERVITEC`; não dependa de uma unidade mapeada de outra sessão do Windows.

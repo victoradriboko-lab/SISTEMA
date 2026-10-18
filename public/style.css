@@ -347,3 +347,9 @@ aside { top: 0; bottom: auto; left: 0; height: 100vh; height: 100dvh; justify-co
 aside > .brand,aside > .nav-label,aside > nav { flex-shrink: 0; }
 aside > nav { align-content: start; }
 @media(max-width:760px) { aside { position: sticky; top: 0; height: auto; max-height: 45vh; max-height: 45dvh; z-index: 10; } }
+.portal-filters { margin: 0 0 24px; }
+.portal-chart-controls { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; margin-bottom: 28px; }
+.portal-chart-controls label { margin-top: 0; }
+.portal-pagination { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; }
+.portal-pagination span { color: var(--muted); font-size: 12px; }
+@media(max-width:540px) { .portal-chart-controls { grid-template-columns: minmax(0,1fr); } }

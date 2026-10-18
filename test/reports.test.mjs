@@ -11,7 +11,7 @@ test('CSV preserva acentos e aspas e neutraliza fórmulas de planilha',()=>{
  const csv=reportsCSV({columns:[{key:'name',label:'Cliente'},{key:'total',label:'Total'}],rows:[{name:'Empresa "São José"; Centro',total:2},{name:' =HYPERLINK("x")',total:1},{name:'@SUM(A1)',total:1}]});
  assert.ok(csv.startsWith('\ufeff"Cliente";"Total"\r\n'));assert.ok(csv.includes('"Empresa ""São José""; Centro";"2"'));assert.ok(csv.includes('"\' =HYPERLINK'));assert.ok(csv.includes('"\'@SUM(A1)"'));assert.ok(csv.endsWith('\r\n'));
 });
-test('relatórios agregam por cliente e mês, filtram datas inclusivas e respeitam permissões',async()=>{
+test('relatórios por cliente, mês e operador validam filtros, atribuição e permissões',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'sistema-reports-')),child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3226',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
  const call=async(path,method='GET',body,headers={})=>{const r=await fetch('http://127.0.0.1:3226/api/'+path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};};
  let db;
@@ -40,6 +40,26 @@ test('relatórios agregam por cliente e mês, filtram datas inclusivas e respeit
   assert.equal((await call('reports?type=assets-connection','GET',undefined,headers)).status,403);
   assert.equal((await call('ticket-clients','GET',undefined,headers)).status,permissions.includes('tickets.read')?200:403);
  }
+ const operatorIds=[];
+ for(const email of ['operator-a@example.test','operator-b@example.test']){const r=await call('users','POST',{name:'Operador Teste',email,password,role:'technician'},admin);assert.equal(r.status,201);operatorIds.push(r.data.id);}
+ const beforeAssignment=(await call('tickets','GET',undefined,admin)).data.find(t=>t.id===ids[0]);
+ assert.equal((await call('tickets/'+ids[0],'PATCH',{operatorId:operatorIds[0]},admin)).status,200);
+ assert.equal((await call('tickets/'+ids[1],'PATCH',{operatorId:operatorIds[1]},admin)).status,200);
+ const afterAssignment=(await call('tickets','GET',undefined,admin)).data.find(t=>t.id===ids[0]);assert.equal(afterAssignment.status_since,beforeAssignment.status_since);assert.equal(afterAssignment.client_id,beforeAssignment.client_id);assert.equal(afterAssignment.status,beforeAssignment.status);assert.equal(afterAssignment.operator_name,'Operador Teste');
+ const operators=await call('reports?type=tickets-operator','GET',undefined,admin);assert.equal(operators.status,200);assert.equal(operators.data.total,5);assert.equal(operators.data.rows.length,3);assert.equal(operators.data.rows.find(r=>r.operatorId===0).total,3);assert.ok(operatorIds.every(id=>operators.data.rows.some(r=>r.operatorId===id&&r.total===1)));
+ assert.equal((await call('reports?type=tickets-operator&clientId='+a.data.id+'&operatorId='+operatorIds[1]+'&status=Resolvido','GET',undefined,admin)).data.total,1);
+ assert.equal((await call('reports?type=tickets-month&operatorId=0','GET',undefined,admin)).data.total,3);
+ assert.equal((await call('reports?type=tickets-operator&operatorId=999999','GET',undefined,admin)).status,400);
+ await call('users/'+operatorIds[0],'PATCH',{active:0},admin);
+ const lookup=(await call('ticket-operators','GET',undefined,admin)).data;assert.equal(lookup.find(o=>o.id===operatorIds[0]).assignable,false);assert.ok(lookup.every(o=>!('email' in o)&&!('password' in o)));
+ assert.equal((await call('reports?type=tickets-operator&operatorId='+operatorIds[0],'GET',undefined,admin)).data.total,1);
+ assert.equal((await call('tickets','POST',{title:'Operador inativo',priority:'Alta',operatorId:operatorIds[0]},admin)).status,400);
+ assert.equal((await call('tickets/'+ids[2],'PATCH',{operatorId:operatorIds[0]},admin)).status,400);
+ assert.equal((await call('tickets/'+ids[2],'PATCH',{operatorId:999999},admin)).status,400);
+ const assigned=await call('tickets','POST',{title:'Novo chamado atribuído',priority:'Alta',operatorId:operatorIds[1]},admin);assert.equal(assigned.status,201);
+ assert.equal((await call('tickets/'+assigned.data.id,'PATCH',{operatorId:null},admin)).status,200);
+ const assetsRole=await call('config/roles','POST',{name:'Operador sem chamados'},admin);await call('config/permissions','PUT',{roles:[{id:assetsRole.data.id,permissions:['assets.read']}]},admin);await call('users','POST',{name:'Inventário',email:'inventory-only@example.test',password,role:assetsRole.data.id},admin);const restrictedLogin=await call('login','POST',{email:'inventory-only@example.test',password});const restricted={Cookie:restrictedLogin.cookie};
+ assert.equal((await call('reports?type=tickets-operator','GET',undefined,restricted)).status,403);assert.equal((await call('ticket-operators','GET',undefined,restricted)).status,403);assert.equal((await call('tickets/'+ids[0],'PATCH',{operatorId:null},restricted)).status,403);
  assert.equal((await call('reports')).status,401);
  }finally{db?.close();child.kill();await once(child,'exit');rmSync(dir,{recursive:true,force:true});}
 });

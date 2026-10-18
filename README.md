@@ -188,7 +188,7 @@ Os dados são atualizados a cada dez segundos enquanto a aba está visível. Cli
 
 O item **Relatórios** no menu lateral reúne:
 
-- Chamados por cliente, por mês, por status e por prioridade.
+- Chamados por cliente, por mês, por operador, por status e por prioridade.
 - Equipamentos por cliente e situação dos agentes (online, sem comunicação e aguardando agente).
 
 Os relatórios de chamados iniciam no mês atual, com filtros por cliente, data inicial/final, status e prioridade. **Limpar filtros** permite consultar todos os registros. O período considera a data de criação em UTC e inclui integralmente a data final; os totais por status refletem a situação atual dos chamados. Meses sem chamados não geram linhas. Os relatórios de equipamentos mostram o inventário atual, sem filtro de período. **Gerar relatório** atualiza os resultados; não há atualização automática durante a análise.
@@ -198,3 +198,11 @@ Cada relatório apresenta totais, um comparativo de até doze grupos e uma tabel
 Para chamados por cliente, selecione a empresa em **Novo chamado**. Nos registros existentes, altere a coluna **Cliente** na lista de chamados. Essa alteração preserva a situação e o tempo naquela situação. Chamados sem vínculo continuam no grupo **Sem cliente**: a migração não atribui clientes automaticamente.
 
 As permissões de origem continuam valendo: `tickets.read` permite relatórios de chamados; `assets.read`, relatórios de inventário; informações de conexão também exigem `monitor.read`. A alteração do cliente de um chamado exige `tickets.write`. A migração adiciona o vínculo do cliente sem apagar chamados ou dados existentes.
+
+#### Chamados por operador
+
+Em **Relatórios → Chamados por operador**, consulte totais de abertos, em atendimento e resolvidos por responsável atual. Combine filtros de operador, cliente, período de criação, status e prioridade. O filtro de operador também está disponível nos demais relatórios de chamados. A tabela e o CSV incluem o código do operador para distinguir usuários com nomes iguais.
+
+Escolha **Operador responsável** em Novo chamado ou na coluna correspondente da lista. Só usuários ativos com `tickets.write` podem receber novas atribuições. A alteração exige essa mesma permissão e preserva o cliente, o status e o tempo naquela situação. Operadores desativados ou que perderam a permissão continuam nos relatórios dos chamados atribuídos a eles, mas não podem receber novos chamados.
+
+Chamados existentes recebem operador vazio na migração e aparecem em **Sem operador** até serem atribuídos. O relatório considera o responsável atual, sem reconstruir atribuições anteriores. Nenhum chamado é atribuído automaticamente ao usuário que o criou.

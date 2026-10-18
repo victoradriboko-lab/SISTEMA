@@ -7,7 +7,7 @@ import {execFileSync} from 'node:child_process';
 
 export const permissionCatalog = [
   {key:'tickets.read',label:'Visualizar chamados',group:'Chamados'},
-  {key:'tickets.write',label:'Criar chamados e alterar status, cliente, operador e tipo de atendimento',group:'Chamados'},
+  {key:'tickets.write',label:'Criar/alterar chamados e aprovar e-mails e remetentes',group:'Chamados'},
   {key:'assets.read',label:'Consultar equipamentos',group:'Equipamentos'},
   {key:'assets.write',label:'Cadastrar equipamentos e renovar tokens de agentes',group:'Equipamentos'},
   {key:'monitor.read',label:'Visualizar monitoramento',group:'Monitoramento'},
@@ -164,6 +164,8 @@ export function createConfiguration({db,json,body,check,root}){
           const schedule=copy.prepare("SELECT value FROM settings WHERE key='backup-schedule'").get();if(schedule)copy.prepare("UPDATE settings SET value=? WHERE key='backup-schedule'").run(JSON.stringify({...JSON.parse(schedule.value),enabled:false}));
           copy.prepare("DELETE FROM settings WHERE key IN ('backup-next-run','backup-last-date')").run();
           if(copy.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='backup_lease'").get())copy.exec('DELETE FROM backup_lease');
+          const incoming=copy.prepare("SELECT value FROM settings WHERE key='incoming-mail'").get();if(incoming)copy.prepare("UPDATE settings SET value=? WHERE key='incoming-mail'").run(JSON.stringify({...JSON.parse(incoming.value),enabled:false}));
+          if(copy.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='email_receiver_lock'").get())copy.exec('DELETE FROM email_receiver_lock');
           copy.exec('VACUUM');
         }finally{copy.close();}
         const data=readFileSync(file);res.writeHead(200,{'Content-Type':'application/vnd.sqlite3','Content-Disposition':`attachment; filename="sistema-backup-${new Date().toISOString().replace(/[:.]/g,'-')}.sqlite"`});res.end(data);

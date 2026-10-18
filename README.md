@@ -1,6 +1,6 @@
 # SISTEMA — Central interna de TI
 
-Primeira versão independente de uma central de serviços em português. Node.js 24+, SQLite nativo e Python 3 para o agente Linux. Não exige instalação de pacotes externos.
+Primeira versão independente de uma central de serviços em português. Node.js 24+, SQLite nativo e Python 3 para o agente Linux. A recepção de e-mails utiliza ImapFlow e MailParser; instale as dependências com `npm ci`.
 
 ## Manual do usuário
 
@@ -10,6 +10,7 @@ Consulte o [manual em Word](docs/manual/Manual-do-Usuario-SERVITEC-VSA.docx) ou 
 
 ```sh
 cd /workspace/SISTEMA
+npm ci
 npm run check
 npm test
 npm start
@@ -33,7 +34,7 @@ Cadastre um equipamento e guarde seu token. Em um terminal da máquina Linux a m
 
 ## Próximas etapas
 
-Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está sinalizado como pendente na interface: será necessário selecionar e instalar RustDesk ou MeshCentral, configurar servidor, clientes, autorização e auditoria. Também faltam agente macOS, SLA contratado, anexos, integração de e-mail, recuperação de senha por e-mail, limitação de tentativas de login e alertas automáticos por e-mail. O agente Windows precisa de validação piloto no Windows antes de distribuição ampla. Antes de uso amplo, concluir os controles necessários ao seu ambiente e revisar a segurança e a rotina de backup. O cadastro inicial é destinado apenas ao primeiro administrador. Administradores podem redefinir senhas de outros usuários; a própria senha exige confirmação da senha atual.
+Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está sinalizado como pendente na interface: será necessário selecionar e instalar RustDesk ou MeshCentral, configurar servidor, clientes, autorização e auditoria. Também faltam agente macOS, SLA contratado, anexos, respostas/envio de e-mail, recuperação de senha por e-mail, limitação de tentativas de login e alertas automáticos por e-mail. O agente Windows precisa de validação piloto no Windows antes de distribuição ampla. Antes de uso amplo, concluir os controles necessários ao seu ambiente e revisar a segurança e a rotina de backup. O cadastro inicial é destinado apenas ao primeiro administrador. Administradores podem redefinir senhas de outros usuários; a própria senha exige confirmação da senha atual.
 
 ## Validação
 
@@ -52,7 +53,9 @@ Para atualizar depois, no PowerShell como administrador, dentro da pasta do proj
 ```powershell
 Stop-ScheduledTask -TaskName 'Servitec-Sistema'
 git pull --ff-only
-# Confirme que o pull concluiu sem erros antes de iniciar.
+# Confirme que o pull concluiu sem erros.
+npm ci --omit=dev
+# Confirme que a instalação concluiu sem erros antes de iniciar.
 Start-ScheduledTask -TaskName 'Servitec-Sistema'
 ```
 
@@ -111,7 +114,7 @@ TI-002;Servidor de arquivos;Infraestrutura;Linux
 
 1. Pare `Servitec-Sistema` e verifique que o processo da aplicação encerrou.
 2. Anote o commit atual (`git rev-parse HEAD`) e copie a pasta `data` inteira, com o sistema parado, para uma pasta de backup fora do checkout.
-3. Atualize todos os arquivos com `git pull --ff-only`, inicie a tarefa e use Ctrl+F5 no navegador. Não copie apenas `server.mjs`: ele agora depende de `configuration.mjs` e a interface usa `public/settings.js`.
+3. Atualize todos os arquivos com `git pull --ff-only`, execute `npm ci --omit=dev`, inicie a tarefa e use Ctrl+F5 no navegador. Não copie apenas `server.mjs`: ele agora depende de `configuration.mjs` e a interface usa `public/settings.js`.
 4. A migração é aditiva: preserva usuários, senhas, chamados, equipamentos e tokens, cria as tabelas de configurações e adiciona código de equipamento e início da situação do chamado. As permissões já configuradas são preservadas em reinícios futuros.
 
 Para recuperar apenas um backup baixado nesta versão: pare a tarefa, preserve uma cópia da pasta `data` atual, separe os antigos arquivos `sistema.db`, `sistema.db-wal` e `sistema.db-shm` em outro local, copie o arquivo baixado como `data/sistema.db` e inicie a tarefa. Não misture arquivos WAL/SHM antigos com um banco restaurado. Os usuários precisam fazer login novamente. Essa recuperação substitui o estado do banco pelo momento do backup.
@@ -251,6 +254,16 @@ Em **Salvar filtros e apresentação como modelo pessoal**, informe um nome. O m
 
 Os modelos ficam no banco de dados, vinculados ao usuário, e continuam disponíveis após recarregar a página ou acessar de outro computador. Cada usuário vê apenas os próprios modelos e os tipos que pode consultar. Há um limite de cinquenta modelos por usuário; para alterar um modelo existente, salve com outro nome ou exclua a versão anterior. A migração apenas acrescenta a tabela de modelos e preserva os dados existentes.
 
+### Recebimento de chamados por Gmail / Google Workspace
+
+O menu **Central de e-mails** reúne **Aguardando aprovação**, chamados gerados, rejeitados, bloqueados, mensagens automáticas/ignoradas e remetentes vinculados. O administrador cadastra a caixa em **Configurações → E-mail**, com endereço, senha de app do Google e intervalo de coleta. O recebimento começa desativado. A ativação testa a conexão IMAP/TLS; não use a senha normal da conta Google. As políticas do Workspace precisam permitir IMAP, verificação em duas etapas e senhas de app. OAuth e envio de respostas não fazem parte desta conexão.
+
+O primeiro e-mail de um endereço desconhecido fica na fila, sem criar chamado. Um operador com permissão de alterar chamados revisa o conteúdo, escolhe a empresa e aprova. **Memorizar este remetente** autoriza futuros e-mails desse endereço exato para aquela empresa. É possível liberar só a mensagem atual ou, opcionalmente, os outros e-mails pendentes sem alerta do mesmo remetente. Os chamados gerados ficam abertos, com prioridade Média, e aguardam atribuição de operador e modalidade de atendimento.
+
+A primeira ativação define o ponto inicial na INBOX, sem importar o acervo antigo. Pausar/reativar a mesma caixa ou reiniciar o servidor retoma o último ponto salvo. **Reiniciar o ponto de coleta a partir de agora** é uma opção explícita que ignora mensagens ainda não importadas. A coleta não altera a marcação de lido e não apaga e-mails. Registros repetidos são deduplicados; respostas automáticas e listas são separadas; alertas de origem/conteúdo continuam pendentes mesmo para remetentes conhecidos. Anexos permanecem na caixa original; a central exibe apenas seus nomes e tamanhos.
+
+Para atualizar o servidor, pare a tarefa, preserve um backup, execute `git pull --ff-only` e `npm ci --omit=dev`, e inicie novamente. Os instaladores completos de início automático também instalam as dependências. Não ative a caixa apenas para conferir as telas: use a importação manual de `.eml` com dados de teste. [Instruções completas de configuração, uso e recuperação](docs/EMAIL-GOOGLE-WORKSPACE.md).
+
 ### Painel do Cliente em outra porta
 
 Um único `npm start` inicia o sistema interno e o painel em duas portas, usando o mesmo banco. A porta interna atual é preservada. O painel utiliza `CLIENT_PORT=3001` por padrão e `CLIENT_HOST` opcional (herda `HOST`). As portas precisam ser diferentes e estar livres; se uma não puder abrir, o processo encerra com erro no log. `CLIENT_PORT=0` é reservado a testes com porta temporária.
@@ -293,7 +306,7 @@ Cada execução bem-sucedida cria uma pasta `servitec-vsa-AAAAMMDDTHHMMSSZ-ident
 - `manifest.json`: lista de arquivos, tamanhos e hashes SHA-256 para conferência de integridade.
 - `COMO-RESTAURAR.txt`: instruções de recuperação.
 
-São excluídos `.git`, `node_modules`, diretórios de compilação `bin`/`obj`, logs e links simbólicos. A cópia não inclui o Windows, o executável do Node.js, credenciais de tarefas, certificados externos, proxy ou variáveis externas do servidor. Sessões de login são removidas e o agendamento fica **desativado no banco da cópia**, para revisão após a restauração. O banco original continua com sua configuração ativa. O download manual de banco em **Configurações → Sistema** também permanece disponível e desativa o agendamento apenas na cópia baixada.
+São excluídos `.git`, `node_modules`, diretórios de compilação `bin`/`obj`, logs e links simbólicos. A cópia não inclui o Windows, o executável do Node.js, credenciais de tarefas, certificados externos, proxy ou variáveis externas do servidor. Sessões de login são removidas, e o agendamento de backup e o recebimento de e-mails ficam **desativados no banco da cópia**, para revisão após a restauração. O banco original continua com sua configuração ativa. O download manual de banco em **Configurações → Sistema** também permanece disponível e desativa o agendamento apenas na cópia baixada.
 
 A retenção só remove cópias concluídas e identificadas por este sistema na mesma pasta de destino, depois de concluir uma nova cópia. Arquivos de terceiros e cópias em destinos anteriores são preservados. Não há exclusão automática de cópias incompletas.
 
@@ -301,7 +314,7 @@ A retenção só remove cópias concluídas e identificadas por este sistema na 
 
 1. Pare o processo e a tarefa **Servitec-Sistema** e preserve a instalação atual antes da substituição.
 2. Copie o conteúdo de `sistema/` do backup para uma pasta nova. Use juntos o código e o banco dessa cópia; não misture WAL/SHM antigos com `data/sistema.db` restaurado.
-3. Disponibilize Node.js 24 ou superior. Se usar `DATA_DIR`, ajuste-o para a pasta `data` restaurada. Reconfigure HOST, PORT, HTTPS e a tarefa do Windows conforme seu ambiente.
+3. Disponibilize Node.js 24 ou superior e execute `npm ci --omit=dev` na pasta restaurada. Se usar `DATA_DIR`, ajuste-o para a pasta `data` restaurada. Reconfigure HOST, PORT, HTTPS e a tarefa do Windows conforme seu ambiente.
 4. Inicie o sistema, faça login novamente, confira os registros e revise o destino e a agenda antes de reativar os backups. A recuperação substitui os dados pelo momento da cópia.
 
 A pasta restaurada não contém os metadados Git. Para retomar atualizações pelo GitHub, prepare um checkout do código correspondente e migre os dados com o sistema parado. A validação automatizada desta entrega criou backups, conferiu hashes, retenção e agenda vencida e iniciou uma instalação restaurada com login e chamados preservados. Acesso a discos/compartilhamentos e permissões da tarefa devem ser conferidos no seu Windows Server.

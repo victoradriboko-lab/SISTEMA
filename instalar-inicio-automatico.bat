@@ -77,6 +77,13 @@ try {
 '@
     [IO.File]::WriteAllText($runner, $runnerContent, [Text.Encoding]::ASCII)
 
+    if (Test-Path -LiteralPath (Join-Path $project 'package-lock.json')) {
+        $npm = (Get-Command npm.cmd -ErrorAction Stop).Source
+        Push-Location -LiteralPath $project
+        try { & $npm ci --omit=dev } finally { Pop-Location }
+        if ($LASTEXITCODE -ne 0) { throw 'Nao foi possivel instalar as dependencias. Confira o acesso ao npm e execute novamente.' }
+    }
+
     $action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" `
         -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$runner`" -NodePath `"$node`"" `
         -WorkingDirectory $project

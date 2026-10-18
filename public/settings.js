@@ -1,11 +1,12 @@
+import {showMailSettings} from './mail-settings.js';
 import {showBackupSettings} from './backup-settings.js';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fields={name:'Nome fantasia',legalName:'Razão social',cnpj:'CNPJ',registration:'Inscrição estadual',address:'Endereço',city:'Cidade / UF',phone:'Telefone',email:'E-mail',site:'Site'};
-const actionNames={'users.setup':'Cadastro inicial','auth.login':'Login','auth.logout':'Saída','auth.failed':'Login recusado','users.password':'Troca de senha','users.create':'Novo usuário','users.update':'Edição de usuário','roles.create':'Novo perfil','permissions.update':'Permissões','rules.update':'Regras de atendimento','company.update':'Dados da empresa','system.backup':'Backup','system.backup.schedule':'Agendamento de backup','system.backup.complete':'Backup completo','system.backup.failed':'Falha de backup','assets.import':'Importação','assets.token':'Token de agente','assets.create':'Novo equipamento','tickets.create':'Novo chamado','tickets.status':'Status de chamado'};
+const actionNames={'users.setup':'Cadastro inicial','auth.login':'Login','auth.logout':'Saída','auth.failed':'Login recusado','users.password':'Troca de senha','users.create':'Novo usuário','users.update':'Edição de usuário','roles.create':'Novo perfil','permissions.update':'Permissões','rules.update':'Regras de atendimento','company.update':'Dados da empresa','system.backup':'Backup','system.backup.schedule':'Agendamento de backup','system.backup.complete':'Backup completo','system.backup.failed':'Falha de backup','assets.import':'Importação','assets.token':'Token de agente','assets.create':'Novo equipamento','mail.config':'Configuração de e-mail','mail.sync':'Sincronização de e-mail','mail.import':'Importação de e-mail','mail.ticket':'Chamado por e-mail','mail.sender.approve':'Remetente aprovado','mail.sender.update':'Vínculo de remetente','mail.reject':'E-mail rejeitado','tickets.create':'Novo chamado','tickets.status':'Status de chamado'};
 export function createSettings({api,notify,onCompany,onRoles,onUsers}){
   let section='permissions',host,user,sequence=0;
   const has=p=>user.permissions.includes(p);
-  function available(){return [['permissions','Permissões','permissions.manage'],['rules','Atendimento','rules.manage'],['company','Empresa','company.manage'],['imports','Importações','imports.manage'],['activity','Atividades','audit.read'],['backups','Backups','system.manage'],['system','Sistema','system.manage']].filter(([, ,p])=>has(p));}
+  function available(){return [['permissions','Permissões','permissions.manage'],['rules','Atendimento','rules.manage'],['company','Empresa','company.manage'],['imports','Importações','imports.manage'],['activity','Atividades','audit.read'],['mail','E-mail','system.manage'],['backups','Backups','system.manage'],['system','Sistema','system.manage']].filter(([, ,p])=>has(p));}
   function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function bindForm(id,action){host.querySelector(id).onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{await action(e);}catch(error){notify(error.message,'error');}finally{button.disabled=false;}};}
   async function show(element,me){host=element;user=me;const tabs=available();if(!tabs.some(([key])=>key===section))section=tabs[0]?.[0];if(!section){host.textContent='Nenhuma configuração disponível para seu perfil.';return;}
@@ -18,6 +19,7 @@ export function createSettings({api,notify,onCompany,onRoles,onUsers}){
       if(section==='company')await company(id);
       if(section==='imports')imports();
       if(section==='activity')await activity(id);
+      if(section==='mail')await showMailSettings(host.querySelector('.settings-body'),{api,notify});
       if(section==='backups')await showBackupSettings(host.querySelector('.settings-body'),{api,notify});
       if(section==='system')await system(id);
     }catch(error){if(id===sequence){host.querySelector('.settings-body').textContent=error.message;notify(error.message,'error');}}
@@ -80,5 +82,5 @@ export function createSettings({api,notify,onCompany,onRoles,onUsers}){
       download(await response.blob(),`sistema-backup-${new Date().toISOString().slice(0,10)}.sqlite`);notify('Backup baixado. Guarde o arquivo em local seguro.');
     });
   }
-  return {show};
+  return {show,showMail(element,me){section='mail';return show(element,me);}};
 }

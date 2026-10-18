@@ -1,3 +1,4 @@
+import {createMail} from './mail.mjs';
 import {createClientAccess} from './client-access.mjs';
 import {createClientPortal} from './client-portal.mjs';
 import {createBackups} from './backups.mjs';
@@ -48,6 +49,7 @@ const reports=createReports({db,json,config});
 const clientAccess=createClientAccess({db,body,json,config,hash,validEmail,validPassword,portalURL});
 const clientPortal=createClientPortal({db,json,config});
 const telemetry=createTelemetry({db,body,json,config,root,clients});
+const mail=createMail({db,body,json,config,check,dataDir});
 const handler=audience=>async(req,res)=>{const customer=audience==='client',cookieName=customer?'servitec_client_session':'session',secure=(customer?process.env.CLIENT_COOKIE_SECURE??process.env.COOKIE_SECURE:process.env.COOKIE_SECURE)==='1',cookieOptions=`HttpOnly; SameSite=Strict; Path=/${secure?'; Secure':''}`;try{
 res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','same-origin');
 res.setHeader('Content-Security-Policy',"default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self'; frame-ancestors 'none'");
@@ -78,6 +80,7 @@ db.prepare('DELETE FROM sessions WHERE user_id=?').run(session.id);
 config.audit(session,'users.password','Própria senha alterada');return json(res,200,{ok:true,reauthenticate:true});
 }
 if(customer){await clientPortal.handle(req,res,path,session);return;}
+if(await mail.handle(req,res,path,session))return;
 if(await clientAccess.handle(req,res,path,session))return;
 if(await backups.handle(req,res,path,session))return;
 if(await reportModels.handle(req,res,path,session))return;
@@ -118,7 +121,7 @@ return json(res,404,{error:'Rota não encontrada'});
 }
 if((path==='/api/tickets'||path.startsWith('/api/tickets/'))&&!config.allowed(session,req.method==='GET'?'tickets.read':'tickets.write'))return json(res,403,{error:'Sem permissão para acessar ou alterar chamados'});
 if((path==='/api/assets'||path.startsWith('/api/assets/'))&&!config.allowed(session,req.method==='GET'?'assets.read':'assets.write'))return json(res,403,{error:'Sem permissão para acessar ou alterar equipamentos'});
-if(path==='/api/tickets'&&req.method==='GET')return json(res,200,db.prepare('SELECT t.*,c.name AS client_name,u.name AS operator_name FROM tickets t LEFT JOIN clients c ON c.id=t.client_id LEFT JOIN users u ON u.id=t.operator_id ORDER BY t.id DESC').all().map(config.ticketAlert));
+if(path==='/api/tickets'&&req.method==='GET')return json(res,200,db.prepare('SELECT t.*,c.name AS client_name,u.name AS operator_name,em.sender AS email_sender FROM tickets t LEFT JOIN clients c ON c.id=t.client_id LEFT JOIN users u ON u.id=t.operator_id LEFT JOIN email_messages em ON em.ticket_id=t.id ORDER BY t.id DESC').all().map(config.ticketAlert));
 if(path==='/api/tickets'&&req.method==='POST'){const b=await body(req);if(!str(b.title)||!['Baixa','Média','Alta','Crítica'].includes(b.priority))return json(res,400,{error:'Título e prioridade válidos são obrigatórios'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const operatorId=b.operatorId===undefined||b.operatorId===null||b.operatorId===''?null:Number(b.operatorId);if(operatorId!==null&&(!Number.isSafeInteger(operatorId)||!reports.canAssignOperator(operatorId)))return json(res,400,{error:'Selecione um operador ativo com permissão de atender chamados'});const serviceType=b.serviceType===undefined||b.serviceType===null||b.serviceType===''?null:b.serviceType;if(serviceType!==null&&!['Interno','Externo'].includes(serviceType))return json(res,400,{error:'Tipo de atendimento deve ser Interno ou Externo'});const row=db.prepare('INSERT INTO tickets(title,description,priority,status_since,client_id,operator_id,service_type) VALUES(?,?,?,CURRENT_TIMESTAMP,?,?,?)').run(str(b.title),str(b.description,5000),b.priority,clientId,operatorId,serviceType);config.audit(session,'tickets.create',`Chamado #${row.lastInsertRowid} criado`);return json(res,201,{id:Number(row.lastInsertRowid)});}
 if(/^\/api\/tickets\/\d+$/.test(path)&&req.method==='PATCH'){
 const b=await body(req),id=Number(path.split('/').pop()),ticket=db.prepare('SELECT id,status,client_id,operator_id,service_type FROM tickets WHERE id=?').get(id);
@@ -136,7 +139,7 @@ config.audit(session,'tickets.update',`Chamado #${id}: ${status}, cliente ${clie
 
 if(path==='/api/assets'&&req.method==='POST'){const b=await body(req);if(!str(b.name))return json(res,400,{error:'Nome obrigatório'});const code=str(b.code,81)||null;if(code&&code.length>80)return json(res,400,{error:'Código deve ter até 80 caracteres'});if(code&&db.prepare('SELECT id FROM assets WHERE code=?').get(code))return json(res,409,{error:'Código de equipamento já cadastrado'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const token=randomBytes(32).toString('hex');const row=db.prepare('INSERT INTO assets(name,owner,os,token,code,client_id) VALUES(?,?,?,?,?,?)').run(str(b.name),str(b.owner),str(b.os),token,code,clientId);config.audit(session,'assets.create',`Equipamento #${row.lastInsertRowid} cadastrado`);return json(res,201,{id:Number(row.lastInsertRowid),...(clientId?{}:{token})});}
 return json(res,404,{error:'Rota não encontrada'});}
-const files=customer?['/','/theme.js','/theme.css','/customer-app.js','/customer.css','/client-portal.js','/reports.js']:['/','/theme.js','/theme.css','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/style.css'];
+const files=customer?['/','/theme.js','/theme.css','/customer-app.js','/customer.css','/client-portal.js','/reports.js']:[ '/', '/mail.js','/mail-settings.js','/mail.css','/theme.js','/theme.css','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/style.css'];
 if(req.method==='GET'&&files.includes(path)){const name=path==='/'?(customer?'customer.html':'index.html'):path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
 json(res,404,{error:'Não encontrado'});
 }catch(err){json(res,err.status||400,{error:err.status?err.message:'Não foi possível processar a solicitação'});}};

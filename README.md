@@ -239,3 +239,32 @@ Use os atalhos **Mês atual**, **Mês anterior**, **Últimos 30 dias**, **Ano at
 Em **Salvar filtros e apresentação como modelo pessoal**, informe um nome. O modelo guarda o tipo de relatório, os filtros do resultado gerado e a apresentação já aplicada. Suas datas ficam fixas; ajuste o período ao reutilizar, quando necessário. Em **Meus modelos de relatório**, carregue ou exclua um modelo. Ao carregar, os resultados são consultados novamente, e as permissões atuais continuam valendo. Modelos não armazenam cópias dos dados.
 
 Os modelos ficam no banco de dados, vinculados ao usuário, e continuam disponíveis após recarregar a página ou acessar de outro computador. Cada usuário vê apenas os próprios modelos e os tipos que pode consultar. Há um limite de cinquenta modelos por usuário; para alterar um modelo existente, salve com outro nome ou exclua a versão anterior. A migração apenas acrescenta a tabela de modelos e preserva os dados existentes.
+
+### Backup completo e agendado no servidor
+
+Como administrador, abra **Configurações → Backups**. O agendamento inicia desativado. Informe uma pasta absoluta **no servidor**, fora da instalação e da pasta de dados; por exemplo, `D:\Backups\SERVITEC` se a aplicação estiver em `C:\Servitec\SISTEMA`. A pasta pode ser criada ao salvar. Para compartilhamento de rede, use um caminho UNC como `\\servidor-arquivos\backups\SERVITEC`; não dependa de uma unidade mapeada de outra sessão do Windows.
+
+Configure a frequência **A cada hora**, **Diário** ou **Semanal**, o horário, o dia semanal, o fuso (por exemplo, `America/Sao_Paulo`) e a quantidade de cópias a manter, de 1 a 365. Na frequência por hora, considera-se o minuto do campo horário. Confirme sua senha para salvar. O sistema testa a gravação antes de persistir a configuração e informa a próxima execução. **Fazer backup completo agora** usa o destino salvo e também exige sua senha. O histórico apresenta conclusão, falhas e cópias removidas pela retenção.
+
+A conta que executa a tarefa **Servitec-Sistema** precisa conseguir ler a instalação e gravar no destino. No Windows, configure a pasta com acesso apenas para administradores e a conta do serviço. Se a tarefa usa SYSTEM, o acesso a compartilhamentos depende das permissões da conta do computador na rede; use uma conta de serviço com acesso adequado quando necessário. A aplicação não armazena usuário/senha de compartilhamento nem altera as ACLs do Windows. A pasta contém dados e tokens; os backups não são criptografados pela aplicação.
+
+O agendador roda dentro do processo Node.js e verifica a agenda a cada trinta segundos. Mantenha o sistema em execução pela tarefa automática já instalada. O estado persiste no banco: ao reiniciar com uma execução vencida, é feita uma cópia de recuperação, seguida da próxima data futura, sem reproduzir todas as execuções perdidas. Falhas são registradas e a tentativa seguinte segue a agenda. Cópias simultâneas são bloqueadas. Uma parada abrupta pode deixar uma pasta `.parcial-*`, que não é considerada um backup concluído.
+
+Cada execução bem-sucedida cria uma pasta `servitec-vsa-AAAAMMDDTHHMMSSZ-identificador` com:
+
+- `sistema/`: arquivos da aplicação e `data/sistema.db`, além dos demais arquivos regulares de dados. O banco é copiado consistentemente pela API de backup SQLite e verificado com `integrity_check`.
+- `manifest.json`: lista de arquivos, tamanhos e hashes SHA-256 para conferência de integridade.
+- `COMO-RESTAURAR.txt`: instruções de recuperação.
+
+São excluídos `.git`, `node_modules`, diretórios de compilação `bin`/`obj`, logs e links simbólicos. A cópia não inclui o Windows, o executável do Node.js, credenciais de tarefas, certificados externos, proxy ou variáveis externas do servidor. Sessões de login são removidas e o agendamento fica **desativado no banco da cópia**, para revisão após a restauração. O banco original continua com sua configuração ativa. O download manual de banco em **Configurações → Sistema** também permanece disponível e desativa o agendamento apenas na cópia baixada.
+
+A retenção só remove cópias concluídas e identificadas por este sistema na mesma pasta de destino, depois de concluir uma nova cópia. Arquivos de terceiros e cópias em destinos anteriores são preservados. Não há exclusão automática de cópias incompletas.
+
+#### Restaurar uma cópia completa
+
+1. Pare o processo e a tarefa **Servitec-Sistema** e preserve a instalação atual antes da substituição.
+2. Copie o conteúdo de `sistema/` do backup para uma pasta nova. Use juntos o código e o banco dessa cópia; não misture WAL/SHM antigos com `data/sistema.db` restaurado.
+3. Disponibilize Node.js 24 ou superior. Se usar `DATA_DIR`, ajuste-o para a pasta `data` restaurada. Reconfigure HOST, PORT, HTTPS e a tarefa do Windows conforme seu ambiente.
+4. Inicie o sistema, faça login novamente, confira os registros e revise o destino e a agenda antes de reativar os backups. A recuperação substitui os dados pelo momento da cópia.
+
+A pasta restaurada não contém os metadados Git. Para retomar atualizações pelo GitHub, prepare um checkout do código correspondente e migre os dados com o sistema parado. A validação automatizada desta entrega criou backups, conferiu hashes, retenção e agenda vencida e iniciou uma instalação restaurada com login e chamados preservados. Acesso a discos/compartilhamentos e permissões da tarefa devem ser conferidos no seu Windows Server.

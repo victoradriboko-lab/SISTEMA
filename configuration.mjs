@@ -17,7 +17,7 @@ export const permissionCatalog = [
   {key:'audit.read',label:'Consultar histórico de atividades',group:'Configurações'},
   {key:'users.manage',label:'Gerenciar usuários e senhas',group:'Administração',locked:true},
   {key:'permissions.manage',label:'Criar perfis e editar permissões',group:'Administração',locked:true},
-  {key:'system.manage',label:'Consultar versão e baixar backup',group:'Administração',locked:true},
+  {key:'system.manage',label:'Consultar versão e gerenciar backups e agendamento',group:'Administração',locked:true},
 ];
 const defaults={admin:permissionCatalog.map(p=>p.key),technician:['tickets.read','tickets.write','assets.read','assets.write','monitor.read'],viewer:['tickets.read','assets.read','monitor.read']};
 const companyFields=['name','legalName','cnpj','registration','address','city','phone','email','site'];
@@ -159,7 +159,13 @@ export function createConfiguration({db,json,body,check,root}){
       const directory=mkdtempSync(join(tmpdir(),'servitec-backup-'));const file=join(directory,'sistema.sqlite');
       try{
         audit(user,'system.backup','Backup do banco solicitado');db.prepare('VACUUM INTO ?').run(file);
-        const copy=new DatabaseSync(file);try{copy.exec('DELETE FROM sessions; PRAGMA journal_mode=DELETE;');}finally{copy.close();}
+        const copy=new DatabaseSync(file);try{
+          copy.exec('DELETE FROM sessions; PRAGMA journal_mode=DELETE;');
+          const schedule=copy.prepare("SELECT value FROM settings WHERE key='backup-schedule'").get();if(schedule)copy.prepare("UPDATE settings SET value=? WHERE key='backup-schedule'").run(JSON.stringify({...JSON.parse(schedule.value),enabled:false}));
+          copy.prepare("DELETE FROM settings WHERE key IN ('backup-next-run','backup-last-date')").run();
+          if(copy.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='backup_lease'").get())copy.exec('DELETE FROM backup_lease');
+          copy.exec('VACUUM');
+        }finally{copy.close();}
         const data=readFileSync(file);res.writeHead(200,{'Content-Type':'application/vnd.sqlite3','Content-Disposition':`attachment; filename="sistema-backup-${new Date().toISOString().replace(/[:.]/g,'-')}.sqlite"`});res.end(data);
       }finally{rmSync(directory,{recursive:true,force:true});}
       return true;

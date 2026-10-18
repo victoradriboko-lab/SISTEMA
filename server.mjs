@@ -1,3 +1,4 @@
+import {createBackups} from './backups.mjs';
 import {createReportModels} from './report-models.mjs';
 import {createReports} from './reports.mjs';
 import {createClients} from './clients.mjs';
@@ -26,6 +27,7 @@ const check=(password,stored)=>{const [salt,value]=stored.split(':');return timi
 async function body(req){const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>1024*1024)throw Object.assign(Error('Solicitação maior que 1 MB'),{status:413});chunks.push(chunk);}return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');}
 const str=(v,max=500)=>typeof v==='string'?v.trim().slice(0,max):'';
 const config=createConfiguration({db,json,body,check,root});
+const backups=createBackups({db,body,json,config,check,root,dataDir});
 const clients=createClients({db,body,json,config,check});
 const reportModels=createReportModels({db,body,json,config});
 const reports=createReports({db,json,config});
@@ -58,6 +60,7 @@ db.prepare('UPDATE users SET password=? WHERE id=?').run(hash(b.password),sessio
 db.prepare('DELETE FROM sessions WHERE user_id=?').run(session.id);
 config.audit(session,'users.password','Própria senha alterada');return json(res,200,{ok:true,reauthenticate:true});
 }
+if(await backups.handle(req,res,path,session))return;
 if(await reportModels.handle(req,res,path,session))return;
 if(await reports.handle(req,res,path,session))return;
 if(await clients.handle(req,res,path,session))return;
@@ -114,6 +117,6 @@ config.audit(session,'tickets.update',`Chamado #${id}: ${status}, cliente ${clie
 
 if(path==='/api/assets'&&req.method==='POST'){const b=await body(req);if(!str(b.name))return json(res,400,{error:'Nome obrigatório'});const code=str(b.code,81)||null;if(code&&code.length>80)return json(res,400,{error:'Código deve ter até 80 caracteres'});if(code&&db.prepare('SELECT id FROM assets WHERE code=?').get(code))return json(res,409,{error:'Código de equipamento já cadastrado'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const token=randomBytes(32).toString('hex');const row=db.prepare('INSERT INTO assets(name,owner,os,token,code,client_id) VALUES(?,?,?,?,?,?)').run(str(b.name),str(b.owner),str(b.os),token,code,clientId);config.audit(session,'assets.create',`Equipamento #${row.lastInsertRowid} cadastrado`);return json(res,201,{id:Number(row.lastInsertRowid),...(clientId?{}:{token})});}
 return json(res,404,{error:'Rota não encontrada'});}
-if(req.method==='GET'&&['/','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/style.css'].includes(path)){const name=path==='/'?'index.html':path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
+if(req.method==='GET'&&['/','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/style.css'].includes(path)){const name=path==='/'?'index.html':path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
 json(res,404,{error:'Não encontrado'});
 }catch(err){json(res,err.status||400,{error:err.status?err.message:'Não foi possível processar a solicitação'});}}).listen(Number(process.env.PORT||3000),process.env.HOST||'127.0.0.1',()=>console.log('SISTEMA iniciado na porta '+(process.env.PORT||3000)));

@@ -17,7 +17,14 @@ export function createSettings({api,notify,onCompany,onRoles,onUsers}){
       host.querySelector('#settings-users')?.addEventListener('click',onUsers);
       host.querySelectorAll('[data-section]').forEach(button=>button.onclick=()=>{section=button.dataset.section;notify('');show(host,user,false);});
     }
-    host.querySelectorAll('[data-section]').forEach(button=>{const selected=button.dataset.section===section;button.classList.toggle('active',selected);if(selected)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});
+    const navigation=host.querySelector('.settings-tabs');
+    if(!navigation.querySelector('[data-settings-select]')){
+      const label=document.createElement('label');label.textContent='Página de configurações';const select=document.createElement('select');select.dataset.settingsSelect='';select.setAttribute('aria-label','Página de configurações');for(const [key,title] of tabs){const option=document.createElement('option');option.value=key;option.textContent=title;select.append(option);}label.append(select);
+      const previous=document.createElement('button'),next=document.createElement('button'),count=document.createElement('span');previous.type=next.type='button';previous.textContent='← Anterior';next.textContent='Próxima →';previous.dataset.settingsPrevious='';next.dataset.settingsNext='';count.dataset.settingsCount='';count.setAttribute('role','status');navigation.append(label,count,previous,next);navigation.classList.add('settings-pages');
+      select.onchange=()=>host.querySelector(`[data-section="${select.value}"]`).click();const move=delta=>{const index=tabs.findIndex(([key])=>key===section),key=tabs[index+delta]?.[0];if(key)host.querySelector(`[data-section="${key}"]`).click();};previous.onclick=()=>move(-1);next.onclick=()=>move(1);
+    }
+    const currentIndex=tabs.findIndex(([key])=>key===section);navigation.querySelector('[data-settings-select]').value=section;navigation.querySelector('[data-settings-count]').textContent=`Página ${currentIndex+1} de ${tabs.length}`;navigation.querySelector('[data-settings-previous]').disabled=currentIndex===0;navigation.querySelector('[data-settings-next]').disabled=currentIndex===tabs.length-1;
+    host.querySelectorAll('[data-section]').forEach(button=>{const selected=button.dataset.section===section;button.hidden=true;button.classList.toggle('active',selected);if(selected)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});
     host.querySelectorAll('[data-settings-pane]').forEach(pane=>pane.hidden=pane.dataset.settingsPane!==section);
     const pane=currentBody();if(!refresh&&pane.dataset.loaded==='true')return;pane.textContent='Carregando…';
     try{

@@ -1,3 +1,4 @@
+import {paginateTables} from './list-pages.js';
 import {syncNavigation} from './navigation.js';
 import {showSupportDevices} from './support-devices.js';
 import {showService} from './service-ui.js';
@@ -64,6 +65,7 @@ function bindDashboardActions(){
  document.querySelectorAll('[data-dashboard-client]').forEach(button=>button.onclick=()=>{clientFilter=button.dataset.dashboardClient;page='assets';load();});
 }
 function bindLiveActions(){
+ if(['tickets','assets','users'].includes(page)||page==='monitor'&&!selectedMachine)paginateTables(content,page+':'+clientFilter);
  document.querySelectorAll('[data-ticket-detail]').forEach(b=>b.onclick=()=>showTicket(content,{api,notify:showNotice,user:currentUser,id:Number(b.dataset.ticketDetail),back:load}).catch(e=>showNotice(e.message)));
  document.querySelectorAll('[data-ticket-service]').forEach(select=>select.onchange=async()=>{try{await api('tickets/'+select.dataset.ticketService,'PATCH',{serviceType:select.value||null});await load();}catch(error){showNotice(error.message);}});
  document.querySelectorAll('[data-ticket-operator]').forEach(select=>select.onchange=async()=>{try{await api('tickets/'+select.dataset.ticketOperator,'PATCH',{operatorId:select.value?Number(select.value):null});await load();}catch(error){showNotice(error.message);}});

@@ -347,3 +347,9 @@ Atendimento, Clientes, Infraestrutura, Gestão e Administração. A ficha de emp
 usa abas de dados, documentação, contrato e SLA, com salvamento conjunto. Os detalhes
 dos chamados separam histórico, mensagens, anexos e horas. Alternar abas preserva os
 campos em edição; sair do módulo ou recarregar a página ainda exige salvar antes.
+
+Na versão 0.4.5, os cadastros e detalhes passam a usar **páginas curtas**, com seletor
+da página, contador e botões Anterior/Próximo. O cadastro de empresa divide dados,
+contatos, documentação, contrato, equipamentos, valores, horário e metas em etapas
+menores. O salvamento do cadastro completo fica disponível em todas elas. Listas de
+chamados, equipamentos, monitoramento e usuários exibem até 10 registros por página.

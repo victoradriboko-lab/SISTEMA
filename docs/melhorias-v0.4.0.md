@@ -147,3 +147,34 @@ Não há salvamento automático nem armazenamento persistente desses rascunhos:
 salve antes de sair do módulo, sair da conta ou recarregar o navegador.
 
 Atualize a plataforma para 0.4.4 e recarregue a página para receber o novo menu.
+
+## Navegação por páginas curtas · atualização 0.4.5
+
+A navegação extensa por abas foi substituída por páginas, com **Anterior**,
+**Próximo**, seletor de página e indicador de posição. Em Empresas e contratos:
+
+1. Dados cadastrais.
+2. Contatos.
+3. Unidades e filiais.
+4. Documentação.
+5. Modelo do contrato.
+6. Quantidades e preços.
+7. Valores e condições.
+8. Horário de atendimento.
+9. SLA de baixa e média prioridade.
+10. SLA de alta e crítica prioridade.
+
+Páginas sem campos disponíveis para seu perfil ficam ausentes. O modelo fixo antigo
+não exibe a página de quantidades. Alterar a página preserva o preenchimento. O botão
+**Salvar todas as alterações**, no início do formulário, salva o cadastro completo
+e mantém a página atual. Se faltar um campo obrigatório, a página correspondente
+é aberta. A navegação entre páginas não salva automaticamente.
+
+Chamados e Configurações também usam seletor e controles de páginas. Os formulários
+continuam com seus salvamentos próprios e preservam os campos das outras páginas.
+O histórico mostra até cinco eventos por página. As listas principais de chamados,
+equipamentos, monitoramento e usuários exibem dez registros por vez, com total e
+controles de página. A página da lista é mantida durante a atualização do inventário.
+
+O menu lateral permanece agrupado. Salve antes de sair do módulo ou recarregar a
+página. Atualize a plataforma para 0.4.5 e recarregue o navegador.

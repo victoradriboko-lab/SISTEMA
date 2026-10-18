@@ -214,3 +214,9 @@ O campo **Tipo de atendimento** aceita **Interno** e **Externo**, no cadastro e 
 Em **Relatórios → Internos e externos**, compare as modalidades por quantidade, situação e participação percentual no total filtrado. É possível apresentar apenas internos, apenas externos ou ambos, com filtros por cliente, operador, período de criação, status e prioridade, além de CSV e impressão/PDF. A participação considera todos os registros do filtro, inclusive os não classificados. O filtro de modalidade também está disponível nos outros relatórios de chamados.
 
 A migração preserva os registros e deixa os antigos como **Não informado**, sem presumir uma modalidade. Eles podem ser classificados pela lista. A API mantém o campo opcional para compatibilidade e valida as modalidades quando informadas; a solicitação de classificação ao iniciar/concluir ocorre na interface. O relatório considera a classificação atual de cada chamado, sem contar múltiplas visitas ou alterações de modalidade como atendimentos separados.
+
+#### Escolha do gráfico nos relatórios
+
+Após gerar um relatório com dados, escolha **Visualização do gráfico → Barras** ou **Disco (pizza)** no resultado. A troca é imediata, usa os mesmos dados já filtrados e mantém a tabela e a exportação CSV. A escolha é preservada ao gerar novamente ou trocar de relatório durante a sessão da página. A impressão/PDF inclui o gráfico escolhido com sua legenda.
+
+Barras mostram até doze grupos na ordem do relatório. O disco mostra quantidades e percentuais; quando houver mais de doze grupos, os onze maiores aparecem individualmente e os demais são reunidos em **Outros grupos (agrupados)**, preservando o total. A tabela e o CSV continuam completos. Resultados vazios não geram gráfico.

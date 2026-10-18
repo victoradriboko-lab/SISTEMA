@@ -6,10 +6,16 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {once} from 'node:events';
 import {DatabaseSync} from 'node:sqlite';
-import {reportsCSV} from '../public/reports.js';
+import {reportsCSV,renderReportChart} from '../public/reports.js';
 test('CSV preserva acentos e aspas e neutraliza fórmulas de planilha',()=>{
  const csv=reportsCSV({columns:[{key:'name',label:'Cliente'},{key:'total',label:'Total'}],rows:[{name:'Empresa "São José"; Centro',total:2},{name:' =HYPERLINK("x")',total:1},{name:'@SUM(A1)',total:1}]});
  assert.ok(csv.startsWith('\ufeff"Cliente";"Total"\r\n'));assert.ok(csv.includes('"Empresa ""São José""; Centro";"2"'));assert.ok(csv.includes('"\' =HYPERLINK'));assert.ok(csv.includes('"\'@SUM(A1)"'));assert.ok(csv.endsWith('\r\n'));
+});
+test('gráficos tratam 100%, ausência de dados e agrupam fatias sem perder totais',()=>{
+ const single=renderReportChart({title:'Atendimentos',rows:[{label:'Interno',total:5}]},'pie');assert.ok(single.includes('<circle'));assert.ok(single.includes('100%'));assert.ok(!single.includes('NaN'));
+ const rows=Array.from({length:13},(_,i)=>({label:'Cliente '+i,total:i+1})),original=JSON.stringify(rows);
+ const pie=renderReportChart({title:'Clientes',rows},'pie');assert.ok(pie.includes('total 91'));assert.ok(pie.includes('Outros grupos (agrupados)'));assert.ok(pie.includes('3 · 3,3%'));assert.equal(JSON.stringify(rows),original);
+ for(const mode of ['bars','pie']){const empty=renderReportChart({title:'Vazio',rows:[{label:'Zero',total:0}]},mode);assert.ok(!empty.includes('<svg'));assert.ok(!empty.includes('NaN'));const unsafe=renderReportChart({title:'<script>',rows:[{label:'<img src=x>',total:1}]},mode);assert.ok(!unsafe.includes('<img'));assert.ok(!unsafe.includes('<script>'));}
 });
 test('relatórios validam clientes, operadores, tipos de atendimento, filtros e permissões',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'sistema-reports-')),child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3226',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});

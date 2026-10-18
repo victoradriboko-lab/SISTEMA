@@ -159,3 +159,9 @@ dotnet build agents/windows/installer/ServitecAgentSetup.csproj -c Release
 ```
 
 Copie `agents/windows/installer/bin/Release/net462/ServitecAgentSetup.exe` para `agents/windows/ServitecAgentSetup.exe` antes de distribuir. O ZIP é incorporado durante a compilação: ao atualizar o agente ou instaladores, gere novamente o ZIP e recompile também o instalador único.
+
+### Identidade visual SERVITEC VSA
+
+A plataforma usa o nome **Sistema Informática SERVITEC VSA**, com tema tecnológico escuro, detalhes em ciano, painéis com bordas discretas e layout adaptado para celular. O nome da plataforma permanece fixo; o nome fantasia cadastrado em Configurações → Empresa aparece no cabeçalho, e o logotipo personalizado continua disponível no menu. Os dados da empresa e os módulos existentes são preservados.
+
+Para atualizar uma instalação existente, execute `git pull` na pasta do projeto, reinicie o sistema e atualize o navegador com **Ctrl+F5**. Se a instalação usa a tarefa automática do Windows, reinicie essa tarefa pelo Agendador de Tarefas.

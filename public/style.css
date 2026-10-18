@@ -147,3 +147,75 @@ summary { cursor: pointer; color: #7de9fb; }
 .panel details { margin: 20px 0; }
 @media(max-width:600px) { .inventory-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 .zip-option { color: #79daef; display: inline-block; padding: 12px 16px; }
+
+/* Identidade tecnológica — Sistema Informática SERVITEC VSA. */
+:root {
+  --background: #070d17;
+  --surface: #0e1827;
+  --surface-raised: #17263a;
+  --text: #eef5ff;
+  --muted: #a6b8ce;
+  --cyan: #46d9ed;
+  --purple: #624de3;
+  --border: #25374e;
+}
+body {
+  background: radial-gradient(ellipse at 85% 0, #11314766, transparent 48%),
+    linear-gradient(#789ec305 1px, transparent 1px), linear-gradient(90deg, #789ec305 1px, transparent 1px), var(--background);
+  background-size: auto, 40px 40px, 40px 40px, auto;
+}
+aside { background: linear-gradient(180deg,#0b1422,#080f1b); border-color: var(--border); }
+.brand { gap: 10px; padding: 0; }
+.brand-mark { display: flex; flex-shrink: 0; width: 40px; height: 48px; color: var(--cyan); background: none; -webkit-text-fill-color: currentColor; filter: drop-shadow(0 0 8px #46d9ed30); }
+.brand-mark svg { width: 100%; height: 100%; }
+.brand-wordmark { min-width: 0; }
+.brand-caption { font: 8px ui-monospace,Consolas,monospace; letter-spacing: 1.5px; color: #98b1ca; margin: 0 0 7px; }
+.brand-name { font-size: 21px; font-weight: 750; letter-spacing: .5px; white-space: nowrap; }
+.brand-name small { font-size: 10px; color: var(--cyan); border: 1px solid #36556a; border-radius: 4px; padding: 3px 4px; vertical-align: middle; letter-spacing: .6px; }
+.nav-label,.eyebrow,.workspace-label { font-family: ui-monospace,Consolas,monospace; }
+.nav-label { letter-spacing: 1.6px; font-size: 9px; }
+aside nav button { border-radius: 7px; }
+aside nav button.active { background: linear-gradient(90deg,#153b4c,#111e30); border-color: #315568; box-shadow: inset 3px 0 var(--cyan); }
+aside nav button:hover { background: #17283c; }
+footer { font-size: 11px; letter-spacing: 1px; }
+footer small { font-size: 11px; letter-spacing: 0; color: var(--muted); }
+header { background: #0a1220ed; border-color: var(--border); }
+.workspace-label { max-width: 190px; overflow-wrap: anywhere; line-height: 1.6; letter-spacing: 1px; }
+button,.download-button { border-radius: 7px; }
+button:hover { background: #20374c; }
+.primary,.download-button { color: #06151e; background: linear-gradient(110deg,#46d9ed,#7be7ed); border: 1px solid #8cebf2; box-shadow: 0 4px 18px #46d9ed12; }
+.primary:hover,.download-button:hover { background: #9cf2f5; border-color: #c4faff; }
+#logout { background: #101e30; border: 1px solid #344d64; }
+.hero { border-radius: 10px; border-color: #2c4c63; background: radial-gradient(ellipse at 100% 20%,#194b6255,transparent 60%),linear-gradient(120deg,#111f32,#0b1625); }
+.hero::before { content: ""; position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg,transparent 95%,#67d7ed0c 95%),linear-gradient(transparent 95%,#67d7ed0c 95%); background-size: 34px 34px; mask-image: linear-gradient(90deg,transparent,#000); pointer-events: none; }
+.hero::after { width: 260px; height: 260px; right: -100px; bottom: -150px; border-radius: 30px; transform: rotate(45deg); border-color: #46d9ed33; box-shadow: 0 0 0 40px #46d9ed05,0 0 0 80px #46d9ed04; }
+.hero h1 { font-size: clamp(28px,3vw,42px); font-weight: 650; }
+.eyebrow { letter-spacing: 1.7px; line-height: 1.8; }
+.card,.card:nth-child(n) { border-radius: 9px; background: linear-gradient(140deg,#142238,#0e1928); border-color: var(--border); border-top-color: #46617a; }
+.card:nth-child(2) { border-top-color: #8978d8; }
+.card:nth-child(3) { border-top-color: #4ca7c6; }
+.card:nth-child(4) { border-top-color: #4ccca9; }
+.card::after { display: none; }
+.card strong { font-family: ui-monospace,Consolas,monospace; font-weight: 500; }
+.panel { border-radius: 9px; box-shadow: 0 8px 28px #00000014; }
+.panel h2::after { background: linear-gradient(90deg,var(--cyan),#8978d8); }
+td,th { border-bottom-color: #25374e; }
+tbody tr:hover { background: #15253a; }
+input,textarea,select { background: #091321; border-color: #344a63; border-radius: 6px; }
+.settings-tabs button { border-radius: 6px; }
+.settings-tabs button.active { background: #183746; border-color: #4c9cae; color: #baf6ff; }
+.hint { background: #112537; }
+.auth-layout { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; align-items: stretch; padding: 28px 0; }
+.auth-hero { margin: 0; display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 40px 30px; }
+.auth-hero h1 { font-size: clamp(28px,2.8vw,40px); }
+.auth-form { width: 100%; max-width: none; margin: 0; align-self: center; padding: 32px; }
+.auth-form .primary { width: 100%; }
+.hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 32px; }
+.hero-tags span { color: #b0d5e6; border: 1px solid #325165; border-radius: 4px; padding: 7px 9px; font: 10px ui-monospace,Consolas,monospace; }
+.tech-network { display: flex; align-items: center; max-width: 320px; margin-top: 40px; }
+.tech-network span { display: grid; place-items: center; flex-shrink: 0; width: 62px; height: 62px; border: 1px solid #49798d; border-radius: 12px; color: #9eeefa; background: #12334488; font: 11px ui-monospace,Consolas,monospace; }
+.tech-network span:nth-of-type(2) { color: white; border-color: #8b7fd0; background: #30295677; }
+.tech-network i { flex: 1; height: 1px; background: linear-gradient(90deg,#46d9ed,#8978d8); min-width: 10px; }
+@media(max-width:1100px) { .brand-name { font-size: 18px; } .brand-mark { width: 33px; } .brand-caption { font-size: 7px; } .auth-layout { grid-template-columns: 1fr; max-width: 680px; margin: auto; padding-top: 0; } .auth-hero { padding: 30px; } .tech-network { display: none; } .hero-tags { margin-top: 24px; } }
+@media(max-width:760px) { .brand-name { font-size: 22px; } .brand-caption { font-size: 8px; } .brand-mark { width: 39px; } .hero h1 { font-size: 30px; } .auth-layout { gap: 20px; } .auth-hero,.auth-form { padding: 26px; } }
+@media(max-width:420px) { .hero h1 { font-size: 27px; } .eyebrow { font-size: 9px; letter-spacing: 1px; } .auth-hero,.auth-form { padding: 23px 20px; } .hero-tags { gap: 5px; } .hero-tags span { padding: 6px; font-size: 9px; } }

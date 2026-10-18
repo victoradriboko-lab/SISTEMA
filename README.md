@@ -2,6 +2,10 @@
 
 Primeira versão independente de uma central de serviços em português. Node.js 24+, SQLite nativo e Python 3 para o agente Linux. Não exige instalação de pacotes externos.
 
+## Manual do usuário
+
+Consulte o [manual em Word](docs/manual/Manual-do-Usuario-SERVITEC-VSA.docx) ou a [versão em PDF](docs/manual/Manual-do-Usuario-SERVITEC-VSA.pdf), com capa, sumário, imagens e instruções de uso dos módulos, incluindo o portal do cliente e backups.
+
 ## Executar
 
 ```sh

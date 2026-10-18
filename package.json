@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check configuration.mjs && node --check public/app.js && node --check public/settings.js && node --check telemetry.mjs && node --check public/monitor.js && node --check clients.mjs && node --check public/dashboard.js",
+    "check": "node --check server.mjs && node --check configuration.mjs && node --check public/app.js && node --check public/settings.js && node --check telemetry.mjs && node --check public/monitor.js && node --check clients.mjs && node --check public/dashboard.js && node --check reports.mjs && node --check public/reports.js",
     "test": "node --test"
   },
   "engines": {

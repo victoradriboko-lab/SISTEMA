@@ -183,3 +183,18 @@ O login abre o **Dashboard** com saudação, horário da última atualização e
 Os dados vêm dos cadastros e da telemetria reais, conforme as permissões do usuário. Máquinas que nunca se comunicaram aparecem separadas das que ficaram offline. Alertas de recursos consideram apenas equipamentos online com CPU, memória ou algum disco a partir de 90%; chamados atrasados seguem as regras de atendimento configuradas. Sem dados, o painel mostra orientações; sem permissão, mostra informação indisponível, sem inventar valores.
 
 Os dados são atualizados a cada dez segundos enquanto a aba está visível. Clicar num cliente abre o inventário filtrado, e o alerta de equipamento abre seus detalhes no monitoramento. A entrega não altera cadastros, tokens ou o banco de dados. Para atualizar a instalação, execute `git pull`, reinicie o sistema e recarregue o navegador com **Ctrl+F5**.
+
+### Relatórios
+
+O item **Relatórios** no menu lateral reúne:
+
+- Chamados por cliente, por mês, por status e por prioridade.
+- Equipamentos por cliente e situação dos agentes (online, sem comunicação e aguardando agente).
+
+Os relatórios de chamados iniciam no mês atual, com filtros por cliente, data inicial/final, status e prioridade. **Limpar filtros** permite consultar todos os registros. O período considera a data de criação em UTC e inclui integralmente a data final; os totais por status refletem a situação atual dos chamados. Meses sem chamados não geram linhas. Os relatórios de equipamentos mostram o inventário atual, sem filtro de período. **Gerar relatório** atualiza os resultados; não há atualização automática durante a análise.
+
+Cada relatório apresenta totais, um comparativo de até doze grupos e uma tabela com todos os grupos encontrados. **Exportar CSV** gera uma planilha UTF-8 com separador ponto e vírgula, com proteção contra interpretação de nomes como fórmulas. **Imprimir / PDF** abre a impressão do navegador, onde é possível salvar como PDF.
+
+Para chamados por cliente, selecione a empresa em **Novo chamado**. Nos registros existentes, altere a coluna **Cliente** na lista de chamados. Essa alteração preserva a situação e o tempo naquela situação. Chamados sem vínculo continuam no grupo **Sem cliente**: a migração não atribui clientes automaticamente.
+
+As permissões de origem continuam valendo: `tickets.read` permite relatórios de chamados; `assets.read`, relatórios de inventário; informações de conexão também exigem `monitor.read`. A alteração do cliente de um chamado exige `tickets.write`. A migração adiciona o vínculo do cliente sem apagar chamados ou dados existentes.

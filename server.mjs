@@ -1,3 +1,4 @@
+import {createReports} from './reports.mjs';
 import {createClients} from './clients.mjs';
 import {createTelemetry} from './telemetry.mjs';
 import {createConfiguration} from './configuration.mjs';
@@ -25,6 +26,7 @@ async function body(req){const chunks=[];let size=0;for await(const chunk of req
 const str=(v,max=500)=>typeof v==='string'?v.trim().slice(0,max):'';
 const config=createConfiguration({db,json,body,check,root});
 const clients=createClients({db,body,json,config,check});
+const reports=createReports({db,json,config});
 const telemetry=createTelemetry({db,body,json,config,root,clients});
 http.createServer(async(req,res)=>{try{
 res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','same-origin');
@@ -54,6 +56,7 @@ db.prepare('UPDATE users SET password=? WHERE id=?').run(hash(b.password),sessio
 db.prepare('DELETE FROM sessions WHERE user_id=?').run(session.id);
 config.audit(session,'users.password','Própria senha alterada');return json(res,200,{ok:true,reauthenticate:true});
 }
+if(await reports.handle(req,res,path,session))return;
 if(await clients.handle(req,res,path,session))return;
 if(await telemetry.handle(req,res,path,session))return;
 if(await config.handle(req,res,path,session))return;
@@ -90,11 +93,20 @@ return json(res,404,{error:'Rota não encontrada'});
 }
 if((path==='/api/tickets'||path.startsWith('/api/tickets/'))&&!config.allowed(session,req.method==='GET'?'tickets.read':'tickets.write'))return json(res,403,{error:'Sem permissão para acessar ou alterar chamados'});
 if((path==='/api/assets'||path.startsWith('/api/assets/'))&&!config.allowed(session,req.method==='GET'?'assets.read':'assets.write'))return json(res,403,{error:'Sem permissão para acessar ou alterar equipamentos'});
-if(path==='/api/tickets'&&req.method==='GET')return json(res,200,db.prepare('SELECT * FROM tickets ORDER BY id DESC').all().map(config.ticketAlert));
-if(path==='/api/tickets'&&req.method==='POST'){const b=await body(req);if(!str(b.title)||!['Baixa','Média','Alta','Crítica'].includes(b.priority))return json(res,400,{error:'Título e prioridade válidos são obrigatórios'});const row=db.prepare('INSERT INTO tickets(title,description,priority,status_since) VALUES(?,?,?,CURRENT_TIMESTAMP)').run(str(b.title),str(b.description,5000),b.priority);config.audit(session,'tickets.create',`Chamado #${row.lastInsertRowid} criado`);return json(res,201,{id:Number(row.lastInsertRowid)});}
-if(/^\/api\/tickets\/\d+$/.test(path)&&req.method==='PATCH'){const b=await body(req);if(!['Aberto','Em atendimento','Resolvido'].includes(b.status))return json(res,400,{error:'Status inválido'});const result=db.prepare('UPDATE tickets SET status_since=CASE WHEN status<>? THEN CURRENT_TIMESTAMP ELSE status_since END,status=? WHERE id=?').run(b.status,b.status,Number(path.split('/').pop()));if(result.changes)config.audit(session,'tickets.status',`Chamado #${Number(path.split('/').pop())}: ${b.status}`);return json(res,result.changes?200:404,{ok:!!result.changes});}
+if(path==='/api/tickets'&&req.method==='GET')return json(res,200,db.prepare('SELECT t.*,c.name AS client_name FROM tickets t LEFT JOIN clients c ON c.id=t.client_id ORDER BY t.id DESC').all().map(config.ticketAlert));
+if(path==='/api/tickets'&&req.method==='POST'){const b=await body(req);if(!str(b.title)||!['Baixa','Média','Alta','Crítica'].includes(b.priority))return json(res,400,{error:'Título e prioridade válidos são obrigatórios'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const row=db.prepare('INSERT INTO tickets(title,description,priority,status_since,client_id) VALUES(?,?,?,CURRENT_TIMESTAMP,?)').run(str(b.title),str(b.description,5000),b.priority,clientId);config.audit(session,'tickets.create',`Chamado #${row.lastInsertRowid} criado`);return json(res,201,{id:Number(row.lastInsertRowid)});}
+if(/^\/api\/tickets\/\d+$/.test(path)&&req.method==='PATCH'){
+const b=await body(req),id=Number(path.split('/').pop()),ticket=db.prepare('SELECT id,status,client_id FROM tickets WHERE id=?').get(id);
+if(!ticket)return json(res,404,{error:'Chamado não encontrado'});
+if(b.status===undefined&&b.clientId===undefined)return json(res,400,{error:'Informe status ou cliente'});
+const status=b.status??ticket.status,clientId=b.clientId===undefined?ticket.client_id:b.clientId===null||b.clientId===''?null:Number(b.clientId);
+if(!['Aberto','Em atendimento','Resolvido'].includes(status))return json(res,400,{error:'Status inválido'});
+if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});
+db.prepare('UPDATE tickets SET status_since=CASE WHEN status<>? THEN CURRENT_TIMESTAMP ELSE status_since END,status=?,client_id=? WHERE id=?').run(status,status,clientId,id);
+config.audit(session,'tickets.update',`Chamado #${id}: ${status}, cliente ${clientId??'não informado'}`);return json(res,200,{ok:true});}
+
 if(path==='/api/assets'&&req.method==='POST'){const b=await body(req);if(!str(b.name))return json(res,400,{error:'Nome obrigatório'});const code=str(b.code,81)||null;if(code&&code.length>80)return json(res,400,{error:'Código deve ter até 80 caracteres'});if(code&&db.prepare('SELECT id FROM assets WHERE code=?').get(code))return json(res,409,{error:'Código de equipamento já cadastrado'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const token=randomBytes(32).toString('hex');const row=db.prepare('INSERT INTO assets(name,owner,os,token,code,client_id) VALUES(?,?,?,?,?,?)').run(str(b.name),str(b.owner),str(b.os),token,code,clientId);config.audit(session,'assets.create',`Equipamento #${row.lastInsertRowid} cadastrado`);return json(res,201,{id:Number(row.lastInsertRowid),...(clientId?{}:{token})});}
 return json(res,404,{error:'Rota não encontrada'});}
-if(req.method==='GET'&&['/','/app.js','/monitor.js','/dashboard.js','/settings.js','/style.css'].includes(path)){const name=path==='/'?'index.html':path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
+if(req.method==='GET'&&['/','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/style.css'].includes(path)){const name=path==='/'?'index.html':path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
 json(res,404,{error:'Não encontrado'});
 }catch(err){json(res,err.status||400,{error:err.status?err.message:'Não foi possível processar a solicitação'});}}).listen(Number(process.env.PORT||3000),process.env.HOST||'127.0.0.1',()=>console.log('SISTEMA iniciado na porta '+(process.env.PORT||3000)));

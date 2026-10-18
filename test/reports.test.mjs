@@ -26,7 +26,7 @@ test('personalização seleciona colunas, ordena sem alterar a origem e mantém 
  const many={title:'Grupos',rows:Array.from({length:8},(_,i)=>({label:'Grupo '+i,total:1}))};const pie=renderReportChart(many,'pie',5);assert.ok(pie.includes('4 · 50%'));assert.ok(pie.includes('total 8'));
 });
 test('relatórios validam clientes, operadores, tipos de atendimento, filtros e permissões',async()=>{
- const dir=mkdtempSync(join(tmpdir(),'sistema-reports-')),child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3226',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
+ const dir=mkdtempSync(join(tmpdir(),'sistema-reports-')),child=spawn(process.execPath,['server.mjs'],{env:{...process.env,CLIENT_PORT:'0',PORT:'3226',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
  const call=async(path,method='GET',body,headers={})=>{const r=await fetch('http://127.0.0.1:3226/api/'+path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};};
  let db;
  try{

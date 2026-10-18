@@ -27,9 +27,9 @@ try {
         Stop-ScheduledTask -TaskName $taskName
         Start-Sleep -Seconds 2
     }
-    $listener = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue
+    $listener = Get-NetTCPConnection -LocalPort 3000,3001 -State Listen -ErrorAction SilentlyContinue
     if ($listener) {
-        throw 'A porta 3000 esta ocupada. Pare o npm start manual com Ctrl+C e execute este BAT novamente.'
+        throw 'Uma das portas 3000/3001 esta ocupada. Pare o processo manual ou libere a porta antes de executar novamente.'
     }
 
     $action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" `
@@ -43,11 +43,17 @@ try {
     $account = New-ScheduledTaskPrincipal -UserId 'S-1-5-18' -LogonType ServiceAccount -RunLevel Highest
     Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
         -Settings $settings -Principal $account -Force `
-        -Description 'Central Servitec - Node.js na porta 3000, inicio sem login.' | Out-Null
+        -Description 'Central Servitec - equipe na porta 3000 e clientes na porta 3001, inicio sem login.' | Out-Null
 
     if (-not (Get-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue)) {
         New-NetFirewallRule -Name $ruleName -DisplayName 'Servitec - porta 3000 somente rede local' `
             -Direction Inbound -Protocol TCP -LocalPort 3000 -RemoteAddress LocalSubnet `
+            -Action Allow -Profile Any | Out-Null
+    }
+    $clientRuleName = 'Servitec-Clientes-LAN-3001'
+    if (-not (Get-NetFirewallRule -Name $clientRuleName -ErrorAction SilentlyContinue)) {
+        New-NetFirewallRule -Name $clientRuleName -DisplayName 'Servitec - Painel do Cliente porta 3001 somente rede local' `
+            -Direction Inbound -Protocol TCP -LocalPort 3001 -RemoteAddress LocalSubnet `
             -Action Allow -Profile Any | Out-Null
     }
     Start-ScheduledTask -TaskName $taskName
@@ -55,7 +61,10 @@ try {
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
         try {
             $response = Invoke-RestMethod -Uri 'http://127.0.0.1:3000/api/state' -TimeoutSec 2
-            if ($null -ne $response.initialized) { $ready = $true; break }
+            if ($null -ne $response.initialized) {
+                $clientResponse = Invoke-RestMethod -Uri 'http://127.0.0.1:3001/api/state' -TimeoutSec 2
+                if ($clientResponse.portal -eq 'client') { $ready = $true; break }
+            }
         } catch { }
         Start-Sleep -Seconds 1
     }
@@ -65,12 +74,15 @@ try {
     Write-Host ''
     Write-Host 'SUCESSO: sistema iniciado e configurado para iniciar ao ligar o servidor.' -ForegroundColor Green
     Write-Host 'Pode fechar esta janela. Nao precisa manter o npm start aberto.'
-    Write-Host 'Acesse http://IP-DO-SERVIDOR:3000 em um computador da mesma rede.'
+    Write-Host 'Equipe: http://IP-DO-SERVIDOR:3000 | Clientes: http://IP-DO-SERVIDOR:3001 (rede local).'
     Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
         $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*'
-    } | ForEach-Object { Write-Host ('Endereco possivel: http://' + $_.IPAddress + ':3000') }
+    } | ForEach-Object {
+        Write-Host ('Equipe: http://' + $_.IPAddress + ':3000')
+        Write-Host ('Painel do Cliente: http://' + $_.IPAddress + ':3001')
+    }
     Write-Host "Log: $project\data\servidor.log"
-    Write-Host 'Esta configuracao e para rede local HTTP; nao publique a porta 3000 na internet.'
+    Write-Host 'Esta configuracao e para rede local HTTP; nao publique as portas HTTP 3000/3001 na internet; configure HTTPS separadamente.'
     exit 0
 } catch {
     Write-Host ('ERRO: ' + $_.Exception.Message) -ForegroundColor Red

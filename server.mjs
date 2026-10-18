@@ -12,6 +12,14 @@ import {randomBytes,scryptSync,timingSafeEqual} from 'node:crypto';
 import {mkdirSync,readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('.',import.meta.url));
+const readPort=(name,fallback)=>{const value=process.env[name]??String(fallback);if(!/^\d+$/.test(value)||Number(value)>65535)throw Error(`${name} deve ser uma porta entre 0 e 65535`);return Number(value);};
+const internalPort=readPort('PORT',3000),clientPort=readPort('CLIENT_PORT',3001);
+if(internalPort!==0&&internalPort===clientPort)throw Error('CLIENT_PORT deve ser diferente de PORT');
+const internalHost=process.env.HOST||'127.0.0.1',clientHost=process.env.CLIENT_HOST||internalHost;
+let publicClientURL=null;
+if(process.env.CLIENT_PUBLIC_URL){const url=new URL(process.env.CLIENT_PUBLIC_URL);if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.pathname!=='/'||url.search||url.hash)throw Error('CLIENT_PUBLIC_URL deve ser uma URL HTTP(S) sem caminho ou credenciais');publicClientURL=url.origin;}
+const isClient=user=>user.account_type==='client'||user.role==='client_viewer';
+const portalURL=req=>{if(publicClientURL)return publicClientURL;const url=new URL(`http://${req.headers.host}`);url.port=String(clientServer.address()?.port||clientPort);return url.origin;};
 const dataDir=process.env.DATA_DIR||root+'data';
 mkdirSync(dataDir,{recursive:true});
 const db=new DatabaseSync(dataDir+'/sistema.db');
@@ -22,6 +30,8 @@ if (!columns.includes('role')) db.exec("ALTER TABLE users ADD COLUMN role TEXT N
 if (!columns.includes('active')) db.exec('ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
 if(!columns.includes('account_type'))db.exec("ALTER TABLE users ADD COLUMN account_type TEXT NOT NULL DEFAULT 'internal'");
 if(!columns.includes('client_id'))db.exec('ALTER TABLE users ADD COLUMN client_id INTEGER');
+const sessionColumns=db.prepare('PRAGMA table_info(sessions)').all().map(c=>c.name);
+if(!sessionColumns.includes('audience'))db.exec("ALTER TABLE sessions ADD COLUMN audience TEXT NOT NULL DEFAULT 'internal'");
 const validPassword = value => typeof value === 'string' && value.length >= 12 && value.length <= 256;
 const validEmail = value => typeof value === 'string' && value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const publicUsers = () => db.prepare("SELECT id,name,email,role,active FROM users WHERE account_type='internal' ORDER BY name,id").all();
@@ -35,27 +45,28 @@ const backups=createBackups({db,body,json,config,check,root,dataDir});
 const clients=createClients({db,body,json,config,check});
 const reportModels=createReportModels({db,body,json,config});
 const reports=createReports({db,json,config});
-const clientAccess=createClientAccess({db,body,json,config,hash,validEmail,validPassword});
+const clientAccess=createClientAccess({db,body,json,config,hash,validEmail,validPassword,portalURL});
 const clientPortal=createClientPortal({db,json,config});
 const telemetry=createTelemetry({db,body,json,config,root,clients});
-http.createServer(async(req,res)=>{try{
+const handler=audience=>async(req,res)=>{const customer=audience==='client',cookieName=customer?'servitec_client_session':'session',secure=(customer?process.env.CLIENT_COOKIE_SECURE??process.env.COOKIE_SECURE:process.env.COOKIE_SECURE)==='1',cookieOptions=`HttpOnly; SameSite=Strict; Path=/${secure?'; Secure':''}`;try{
 res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','same-origin');
 res.setHeader('Content-Security-Policy',"default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self'; frame-ancestors 'none'");
 const path=new URL(req.url,'http://localhost').pathname;
 if(path.startsWith('/api/'))res.setHeader('Cache-Control','no-store');
 if(await config.publicRoute(req,res,path))return;
 if(req.method!=='GET'&&req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`&&req.headers.origin!==`https://${req.headers.host}`)return json(res,403,{error:'Origem inválida'});
-if(path==='/api/state'&&req.method==='GET'){return json(res,200,{initialized:!!db.prepare('SELECT id FROM users LIMIT 1').get()});}
+if(path==='/api/state'&&req.method==='GET'){return json(res,200,customer?{portal:'client'}:{initialized:!!db.prepare('SELECT id FROM users LIMIT 1').get()});}
 if(path==='/api/setup'&&req.method==='POST'){
+if(customer)return json(res,403,{error:'Cadastros são feitos pelo administrador no sistema interno'});
 if(db.prepare('SELECT id FROM users LIMIT 1').get())return json(res,409,{error:'Administrador já cadastrado'});
 const b=await body(req);if(!str(b.name)||!validEmail(b.email)||!validPassword(b.password))return json(res,400,{error:'Informe nome, e-mail e senha de pelo menos 12 caracteres'});
 if(db.prepare('SELECT id FROM users LIMIT 1').get())return json(res,409,{error:'Administrador já cadastrado'});
 const created=db.prepare('INSERT INTO users(name,email,password) VALUES(?,?,?)').run(str(b.name),str(b.email).toLowerCase(),hash(b.password));config.audit({id:Number(created.lastInsertRowid),name:str(b.name)},'users.setup','Administrador inicial cadastrado');return json(res,201,{ok:true});}
-if(path==='/api/login'&&req.method==='POST'){const b=await body(req);const user=db.prepare('SELECT * FROM users WHERE email=?').get(str(b.email).toLowerCase());if(!user||!user.active||typeof b.password!=='string'||b.password.length>256||!check(b.password,user.password)){config.audit(null,'auth.failed','Tentativa de login recusada');return json(res,401,{error:'Credenciais inválidas'});}config.audit(user,'auth.login','Login realizado');const token=randomBytes(32).toString('hex');db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(token,user.id,Date.now()+28800000);res.setHeader('Set-Cookie',`session=${token}; HttpOnly; SameSite=Strict; Path=/${process.env.COOKIE_SECURE==='1'?'; Secure':''}`);return json(res,200,{ok:true});}
-if(await telemetry.publicRoute(req,res,path))return;
+if(path==='/api/login'&&req.method==='POST'){const b=await body(req);const user=db.prepare('SELECT * FROM users WHERE email=?').get(str(b.email).toLowerCase());if(!user||!user.active||typeof b.password!=='string'||b.password.length>256||!check(b.password,user.password)){config.audit(null,'auth.failed','Tentativa de login recusada');return json(res,401,{error:'Credenciais inválidas'});}if(isClient(user)!==customer)return json(res,403,{error:customer?'Este painel é exclusivo para contas de clientes. Use o sistema interno com sua conta de operador.':'Esta conta pertence ao Painel do Cliente. Acesse '+portalURL(req)});config.audit(user,'auth.login',customer?'Login no Painel do Cliente':'Login realizado');const token=randomBytes(32).toString('hex');db.prepare('INSERT INTO sessions(token,user_id,expires,audience) VALUES(?,?,?,?)').run(token,user.id,Date.now()+28800000,audience);res.setHeader('Set-Cookie',`${cookieName}=${token}; ${cookieOptions}`);return json(res,200,{ok:true});}
+if(!customer&&await telemetry.publicRoute(req,res,path))return;
 if(path.startsWith('/api/')){
-const token=(req.headers.cookie||'').match(/(?:^|;\s*)session=([a-f0-9]+)/)?.[1];const session=db.prepare('SELECT users.id,users.name,users.email,users.role,users.account_type,users.client_id,(SELECT name FROM clients WHERE id=users.client_id) AS client_name FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>? AND users.active=1').get(token||'',Date.now());if(!session)return json(res,401,{error:'Entre para continuar'});
-if(path==='/api/logout'&&req.method==='POST'){db.prepare('DELETE FROM sessions WHERE token=?').run(token);config.audit(session,'auth.logout','Logout realizado');res.setHeader('Set-Cookie','session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return json(res,200,{ok:true});}
+const token=(req.headers.cookie||'').split(';').map(value=>value.trim()).find(value=>value.startsWith(cookieName+'='))?.slice(cookieName.length+1);const session=db.prepare('SELECT users.id,users.name,users.email,users.role,users.account_type,users.client_id,(SELECT name FROM clients WHERE id=users.client_id) AS client_name FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>? AND users.active=1 AND sessions.audience=?').get(token||'',Date.now(),audience);if(!session||isClient(session)!==customer)return json(res,401,{error:'Entre para continuar'});
+if(path==='/api/logout'&&req.method==='POST'){db.prepare('DELETE FROM sessions WHERE token=?').run(token);config.audit(session,'auth.logout','Logout realizado');res.setHeader('Set-Cookie',`${cookieName}=; ${cookieOptions}; Max-Age=0`);return json(res,200,{ok:true});}
 if(path==='/api/me'&&req.method==='GET')return json(res,200,{...session,permissions:session.account_type==='client'||session.role==='client_viewer'?['portal.read']:config.permissions(session.role)});
 if(path==='/api/me/password'&&req.method==='POST'){
 const b=await body(req);
@@ -66,7 +77,7 @@ db.prepare('UPDATE users SET password=? WHERE id=?').run(hash(b.password),sessio
 db.prepare('DELETE FROM sessions WHERE user_id=?').run(session.id);
 config.audit(session,'users.password','Própria senha alterada');return json(res,200,{ok:true,reauthenticate:true});
 }
-if(session.account_type==='client'||session.role==='client_viewer'){await clientPortal.handle(req,res,path,session);return;}
+if(customer){await clientPortal.handle(req,res,path,session);return;}
 if(await clientAccess.handle(req,res,path,session))return;
 if(await backups.handle(req,res,path,session))return;
 if(await reportModels.handle(req,res,path,session))return;
@@ -125,6 +136,11 @@ config.audit(session,'tickets.update',`Chamado #${id}: ${status}, cliente ${clie
 
 if(path==='/api/assets'&&req.method==='POST'){const b=await body(req);if(!str(b.name))return json(res,400,{error:'Nome obrigatório'});const code=str(b.code,81)||null;if(code&&code.length>80)return json(res,400,{error:'Código deve ter até 80 caracteres'});if(code&&db.prepare('SELECT id FROM assets WHERE code=?').get(code))return json(res,409,{error:'Código de equipamento já cadastrado'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const token=randomBytes(32).toString('hex');const row=db.prepare('INSERT INTO assets(name,owner,os,token,code,client_id) VALUES(?,?,?,?,?,?)').run(str(b.name),str(b.owner),str(b.os),token,code,clientId);config.audit(session,'assets.create',`Equipamento #${row.lastInsertRowid} cadastrado`);return json(res,201,{id:Number(row.lastInsertRowid),...(clientId?{}:{token})});}
 return json(res,404,{error:'Rota não encontrada'});}
-if(req.method==='GET'&&['/','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/client-portal.js','/style.css'].includes(path)){const name=path==='/'?'index.html':path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
+const files=customer?['/','/customer-app.js','/customer.css','/client-portal.js','/reports.js']:['/','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/style.css'];
+if(req.method==='GET'&&files.includes(path)){const name=path==='/'?(customer?'customer.html':'index.html'):path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
 json(res,404,{error:'Não encontrado'});
-}catch(err){json(res,err.status||400,{error:err.status?err.message:'Não foi possível processar a solicitação'});}}).listen(Number(process.env.PORT||3000),process.env.HOST||'127.0.0.1',()=>console.log('SISTEMA iniciado na porta '+(process.env.PORT||3000)));
+}catch(err){json(res,err.status||400,{error:err.status?err.message:'Não foi possível processar a solicitação'});}};
+const internalServer=http.createServer(handler('internal')),clientServer=http.createServer(handler('client'));
+for(const server of [internalServer,clientServer])server.on('error',error=>{console.error('Não foi possível iniciar os acessos: '+error.message);process.exit(1);});
+// Anunciar prontidão somente quando os dois acessos estiverem disponíveis.
+internalServer.listen(internalPort,internalHost,()=>clientServer.listen(clientPort,clientHost,()=>console.log(`SISTEMA iniciado na porta ${internalServer.address().port}; Painel do Cliente na porta ${clientServer.address().port}`)));

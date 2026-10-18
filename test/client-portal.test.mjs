@@ -7,10 +7,11 @@ import {join} from 'node:path';
 import {once} from 'node:events';
 import {DatabaseSync} from 'node:sqlite';
 test('portal isola empresas, bloqueia APIs internas e revoga acesso ao alterar vínculo',async()=>{
- const dir=mkdtempSync(join(tmpdir(),'servitec-portal-')),child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3237',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});let db;
- const call=async(path,method='GET',body,headers={})=>{const r=await fetch('http://127.0.0.1:3237/api/'+path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};};
+ const dir=mkdtempSync(join(tmpdir(),'servitec-portal-')),child=spawn(process.execPath,['server.mjs'],{env:{...process.env,CLIENT_PORT:'0',PORT:'3237',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});let db,portalPort;
+ // O cenário usa a entrada dedicada para as credenciais e sessões de clientes.
+ const call=async(path,method='GET',body,headers={})=>{const customer=headers.Cookie?.startsWith('servitec_client_session=')||path==='login'&&['alpha@example.test','beta@example.test'].includes(body?.email);const r=await fetch('http://127.0.0.1:'+(customer?portalPort:3237)+'/api/'+path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};};
  try{
- await Promise.race([once(child.stdout,'data'),new Promise((_,r)=>setTimeout(()=>r(Error('Timeout')),5000).unref())]);
+ const [started]=await Promise.race([once(child.stdout,'data'),new Promise((_,r)=>setTimeout(()=>r(Error('Timeout')),5000).unref())]);portalPort=Number(started.toString().match(/Painel do Cliente na porta (\d+)/)[1]);
  const password='Portal-Clientes-Teste-2026';await call('setup','POST',{name:'Admin',email:'admin@example.test',password});const adminLogin=await call('login','POST',{email:'admin@example.test',password}),admin={Cookie:adminLogin.cookie};
  const a=await call('clients','POST',{name:'Empresa Alpha'},admin),b=await call('clients','POST',{name:'Empresa Beta'},admin);
  const owned=[];for(const [i,status] of ['Aberto','Em atendimento','Resolvido'].entries()){const ticket=await call('tickets','POST',{title:'Chamado Alpha '+i,description:'Descrição Alpha',priority:i===0?'Alta':'Média',clientId:a.data.id,serviceType:i===0?'Externo':'Interno'},admin);owned.push(ticket.data.id);if(status!=='Aberto')await call('tickets/'+ticket.data.id,'PATCH',{status},admin);}
@@ -35,5 +36,5 @@ test('portal isola empresas, bloqueia APIs internas e revoga acesso ao alterar v
  const betaLogin=await call('login','POST',{email:'beta@example.test',password}),beta={Cookie:betaLogin.cookie};assert.equal((await call('portal/overview','GET',undefined,beta)).data.stats.total,1);db.prepare('UPDATE users SET client_id=NULL WHERE id=?').run(accessB.data.id);assert.equal((await call('portal/overview','GET',undefined,beta)).status,403);
  for(let i=0;i<21;i++)await call('tickets','POST',{title:'Página Beta '+i,priority:'Baixa',clientId:b.data.id},admin);const pagedLogin=await call('login','POST',{email:'alpha@example.test',password:'Senha-Pessoal-Cliente-2026'}),paged={Cookie:pagedLogin.cookie};const firstPage=await call('portal/tickets?page=1','GET',undefined,paged),secondPage=await call('portal/tickets?page=2','GET',undefined,paged);assert.equal(firstPage.data.rows.length,20);assert.equal(secondPage.data.rows.length,2);assert.equal(firstPage.data.total,22);assert.ok([...firstPage.data.rows,...secondPage.data.rows].every(t=>!owned.includes(t.id)));
  const internal=await call('users','POST',{name:'Consulta interna',email:'viewer@example.test',password,role:'viewer'},admin);assert.equal(internal.status,201);const viewer=await call('login','POST',{email:'viewer@example.test',password});assert.equal((await call('client-access','GET',undefined,{Cookie:viewer.cookie})).status,403);
- }finally{db?.close();child.kill();await once(child,'exit');rmSync(dir,{recursive:true,force:true});}
+ }finally{db?.close();if(child.exitCode===null&&child.signalCode===null){const exited=once(child,'exit');child.kill();await exited;}rmSync(dir,{recursive:true,force:true});}
 });

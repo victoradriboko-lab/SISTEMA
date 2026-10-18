@@ -7,7 +7,7 @@ import {join} from 'node:path';
 import {once} from 'node:events';
 import {randomUUID} from 'node:crypto';
 test('token por empresa: cadastro automático, filtro, duplicados, união, isolamento e revogação',async()=>{
- const dir=mkdtempSync(join(tmpdir(),'sistema-clients-')),child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3222',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
+ const dir=mkdtempSync(join(tmpdir(),'sistema-clients-')),child=spawn(process.execPath,['server.mjs'],{env:{...process.env,CLIENT_PORT:'0',PORT:'3222',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
  const call=async(path,method='GET',body,headers={})=>{const r=await fetch('http://127.0.0.1:3222/api/'+path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};};
  const sample=(machineId,name='PC-01',inventory=true)=>({schemaVersion:1,sampleId:randomUUID(),observedAt:new Date().toISOString(),agent:{platform:'windows',version:'1.0.0',machineId},metrics:{cpuPercent:25},...(inventory?{inventory:{hostname:name}}:{})});
  try{

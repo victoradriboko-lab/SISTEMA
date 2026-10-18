@@ -15,7 +15,7 @@ test('normalização do protocolo Windows rejeita métricas e inventários invá
  for(const payload of [null,[],sample({schemaVersion:2}),sample({observedAt:'invalid'}),sample({observedAt:new Date(Date.now()+3600000).toISOString()}),sample({observedAt:new Date(Date.now()-8*86400000).toISOString()}),sample({sampleId:'<script>'}),sample({agent:{platform:'windows',machineId:'invalid'}}),sample({metrics:{cpuPercent:101}}),sample({metrics:{memory:{total:1,available:2}}}),sample({inventory:{hostname:'PC',programs:'invalid'}})])assert.throws(()=>normalizeHeartbeat(payload));
 });
 test('agente: vínculo, histórico, offline, deduplicação, revogação e pacote autenticado',async()=>{
- const dir=mkdtempSync(join(tmpdir(),'sistema-telemetry-'));const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3205',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
+ const dir=mkdtempSync(join(tmpdir(),'sistema-telemetry-'));const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,CLIENT_PORT:'0',PORT:'3205',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
  const raw=(path,method='GET',body,headers={})=>fetch('http://127.0.0.1:3205/api/'+path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body)});
  const call=async(path,method='GET',body,headers)=>{const r=await raw(path,method,body,headers);return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};};
  try{

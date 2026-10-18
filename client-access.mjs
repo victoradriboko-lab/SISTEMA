@@ -1,9 +1,10 @@
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
-export function createClientAccess({db,body,json,config,hash,validEmail,validPassword}){
+export function createClientAccess({db,body,json,config,hash,validEmail,validPassword,portalURL}){
  const list=()=>db.prepare("SELECT u.id,u.name,u.email,u.client_id,c.name AS client_name,u.active FROM users u LEFT JOIN clients c ON c.id=u.client_id WHERE u.account_type='client' ORDER BY c.name,u.name,u.id").all();
  async function handle(req,res,path,user){
-  if(path!=='/api/client-access'&&!/^\/api\/client-access\/\d+$/.test(path))return false;
+  if(path!=='/api/client-access'&&path!=='/api/client-access/portal'&&!/^\/api\/client-access\/\d+$/.test(path))return false;
   if(user.role!=='admin'||user.account_type==='client')fail('Somente administradores podem gerenciar acessos de clientes',403);
+  if(path==='/api/client-access/portal'&&req.method==='GET'){json(res,200,{url:portalURL(req)});return true;}
   if(path==='/api/client-access'&&req.method==='GET'){json(res,200,list());return true;}
   if(req.method==='POST'&&path==='/api/client-access'||req.method==='PATCH'&&/^\/api\/client-access\/\d+$/.test(path)){
    const b=await body(req),id=req.method==='PATCH'?Number(path.split('/').pop()):null;

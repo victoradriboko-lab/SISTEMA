@@ -7,7 +7,7 @@ import {join} from 'node:path';
 import {once} from 'node:events';
 test('cadastro, autenticação, chamados, inventário e telemetria',async()=>{
 const dir=mkdtempSync(join(tmpdir(),'sistema-test-'));
-const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3199',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
+const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,CLIENT_PORT:'0',PORT:'3199',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
 let cookie='';
 const call=async(path,method='GET',data,headers={})=>{const r=await fetch('http://127.0.0.1:3199/api/'+path,{method,headers:{'Content-Type':'application/json',Cookie:cookie,...headers},body:data?JSON.stringify(data):undefined});return {status:r.status,body:await r.json(),cookie:r.headers.get('set-cookie')};};
 try{

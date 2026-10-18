@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f3f6fc">
+  <title>Painel do Cliente | SERVITEC VSA</title>
+  <link rel="stylesheet" href="/customer.css">
+</head>
+<body>
+  <a class="skip-link" href="#customer-content">Ir para o conteúdo</a>
+  <header class="customer-header">
+    <a class="customer-brand" href="/" aria-label="Início do Painel do Cliente">
+      <span class="customer-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="m16 2 12 7v14l-12 7-12-7V9Z" stroke="currentColor" stroke-width="1.8"/><path d="M22 10h-9l-4 6h14l-4 6h-9" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>
+      <span><strong>SERVITEC <small>VSA</small></strong><span>Painel do Cliente</span></span>
+    </a>
+    <nav id="customer-nav" aria-label="Navegação do cliente" hidden>
+      <button data-view="dashboard" aria-current="page">Visão geral</button>
+      <button data-view="tickets">Meus chamados</button>
+    </nav>
+    <div class="customer-actions" id="customer-actions" hidden>
+      <span id="customer-name"></span><button id="customer-password">Minha senha</button><button id="customer-logout">Sair</button>
+    </div>
+    <span class="customer-entry-label" id="customer-entry-label">SEU ATENDIMENTO, MAIS PERTO</span>
+  </header>
+  <main>
+    <div id="customer-notice" class="customer-notice" role="status" aria-live="polite" hidden></div>
+    <section id="customer-content" aria-label="Painel do Cliente" tabindex="-1"></section>
+  </main>
+  <footer class="customer-footer"><span>SERVITEC VSA · Painel do Cliente</span><span>Transparência em cada atendimento.</span></footer>
+  <script type="module" src="/customer-app.js"></script>
+</body>
+</html>

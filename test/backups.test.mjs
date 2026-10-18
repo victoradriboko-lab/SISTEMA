@@ -37,7 +37,7 @@ test('backup consistente, retenção restrita, exclusão de sessões e recupera�
  }finally{manager.stop();db.close();await rm(dir,{recursive:true,force:true});}
 });
 test('API administrativa cria backup completo que inicia com dados e login restaurados',async()=>{
- const dir=await mkdtemp(join(tmpdir(),'servitec-backup-api-')),data=join(dir,'live'),destination=join(dir,'backups');const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3233',DATA_DIR:data},stdio:['ignore','pipe','pipe']});let restored;
+ const dir=await mkdtemp(join(tmpdir(),'servitec-backup-api-')),data=join(dir,'live'),destination=join(dir,'backups');const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,CLIENT_PORT:'0',PORT:'3233',DATA_DIR:data},stdio:['ignore','pipe','pipe']});let restored;
  const call=async(path,method='GET',body,headers={},port=3233)=>{const r=await fetch(`http://127.0.0.1:${port}/api/`+path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};};
  try{
  await Promise.race([once(child.stdout,'data'),new Promise((_,reject)=>setTimeout(()=>reject(Error('Timeout')),5000).unref())]);const password='Backup-Administrador-2026';await call('setup','POST',{name:'Admin',email:'admin@example.test',password});const login=await call('login','POST',{email:'admin@example.test',password}),admin={Cookie:login.cookie};
@@ -45,7 +45,7 @@ test('API administrativa cria backup completo que inicia com dados e login resta
  assert.equal((await call('config/backups','PUT',{...schedule,directory:destination,password:'wrong'},admin)).status,403);
  assert.equal((await call('config/backups','PUT',{...schedule,enabled:false,directory:destination,password},admin)).status,200);await call('tickets','POST',{title:'Chamado para restauração',priority:'Alta'},admin);
  const result=await call('config/backups/run','POST',{password},admin);assert.equal(result.status,200);const app=join(destination,result.data.name,'sistema');
- restored=spawn(process.execPath,['server.mjs'],{cwd:app,env:{...process.env,PORT:'3234',DATA_DIR:join(app,'data')},stdio:['ignore','pipe','pipe']});await Promise.race([once(restored.stdout,'data'),new Promise((_,reject)=>setTimeout(()=>reject(Error('Timeout restauração')),5000).unref())]);
+ restored=spawn(process.execPath,['server.mjs'],{cwd:app,env:{...process.env,CLIENT_PORT:'0',PORT:'3234',DATA_DIR:join(app,'data')},stdio:['ignore','pipe','pipe']});await Promise.race([once(restored.stdout,'data'),new Promise((_,reject)=>setTimeout(()=>reject(Error('Timeout restauração')),5000).unref())]);
  assert.equal((await call('me','GET',undefined,admin,3234)).status,401);const nextLogin=await call('login','POST',{email:'admin@example.test',password},{},3234);assert.equal(nextLogin.status,200);const nextAdmin={Cookie:nextLogin.cookie};assert.equal((await call('tickets','GET',undefined,nextAdmin,3234)).data[0].title,'Chamado para restauração');assert.equal((await call('config/backups','GET',undefined,nextAdmin,3234)).data.settings.enabled,false);
  }finally{if(restored){restored.kill();await once(restored,'exit');}child.kill();await once(child,'exit');await rm(dir,{recursive:true,force:true});}
 });

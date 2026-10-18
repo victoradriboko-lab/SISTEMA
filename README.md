@@ -15,7 +15,7 @@ npm test
 npm start
 ```
 
-O servidor escuta em 127.0.0.1:3000. A primeira abertura solicita cadastro do administrador (senha mínima de 12 caracteres). Faça esse cadastro antes de disponibilizar a aplicação a outras pessoas. Não existe usuário padrão. PORT e HOST permitem configurar a escuta. Para acesso pela rede, coloque atrás de proxy HTTPS e defina COOKIE_SECURE=1. Dados persistem em data/sistema.db; DATA_DIR permite outro diretório. Faça backups consistentes com SQLite; não copie apenas o arquivo principal durante gravações em modo WAL.
+O servidor escuta em 127.0.0.1:3000. A primeira abertura solicita cadastro do administrador (senha mínima de 12 caracteres). Faça esse cadastro antes de disponibilizar a aplicação a outras pessoas. Não existe usuário padrão. PORT e HOST permitem configurar a escuta. O Painel do Cliente inicia separadamente em 127.0.0.1:3001. Para acesso pela rede, configure HOST e, para publicação externa, coloque atrás de proxy HTTPS e defina COOKIE_SECURE=1. Dados persistem em data/sistema.db; DATA_DIR permite outro diretório. Faça backups consistentes com SQLite; não copie apenas o arquivo principal durante gravações em modo WAL.
 
 ## Implementado
 
@@ -43,7 +43,7 @@ Esta versão NÃO equivale a todos os recursos do Milvus. Acesso remoto está si
 
 Atualize o checkout, pare o `npm start` manual com Ctrl+C e clique com o botao direito em `instalar-inicio-automatico.bat` → **Executar como administrador**. Requer Node.js 24+ e Windows PowerShell 5.1 com os modulos ScheduledTasks e NetSecurity. O BAT e independente: mantenha apenas esse arquivo junto ao `server.mjs`. Ele contem o instalador e cria automaticamente `data/executar-servidor.ps1`, sem depender da pasta `windows`. Os PS1 dessa pasta ficam como referencia da implementacao original.
 
-O instalador encontra a pasta e o Node.js automaticamente, registra `Servitec-Sistema` no Agendador de Tarefas (conta SYSTEM, sem exigir login), executa imediatamente e verifica `/api/state`. Configura HOST=0.0.0.0, PORT=3000 e COOKIE_SECURE=0 para acesso HTTP pela LAN. A regra de firewall criada permite apenas LocalSubnet; regras mais amplas criadas anteriormente nao sao removidas. Nao encaminhe a porta 3000 para a internet. A publicacao com dominio e HTTPS requer configuracao separada. Como a tarefa executa como SYSTEM, mantenha a pasta em local administrado, com permissao de alteracao apenas para pessoas confiaveis.
+O instalador encontra a pasta e o Node.js automaticamente, registra `Servitec-Sistema` no Agendador de Tarefas (conta SYSTEM, sem exigir login), executa imediatamente e verifica `/api/state`. Configura HOST=0.0.0.0, PORT=3000, CLIENT_PORT=3001 e COOKIE_SECURE=0 para acesso HTTP pela LAN. As regras de firewall das portas 3000 e 3001 permitem apenas LocalSubnet; regras mais amplas criadas anteriormente nao sao removidas. Nao encaminhe a porta 3000 para a internet. A publicacao com dominio e HTTPS requer configuracao separada. Como a tarefa executa como SYSTEM, mantenha a pasta em local administrado, com permissao de alteracao apenas para pessoas confiaveis.
 
 Dados continuam em `data/sistema.db`; o log fica em `data/servidor.log`. O instalador pode ser repetido para atualizar sua propria tarefa, mas preserva tarefas de mesmo nome com outra configuracao. Reinicia apos falha em intervalos de um minuto (ate 999 tentativas). A reinicializacao do Windows e o funcionamento da tarefa devem ser validados no proprio servidor; estes scripts nao foram executados em Windows no ambiente Linux de desenvolvimento.
 
@@ -62,6 +62,7 @@ Para desinstalar apenas a inicializacao automatica e sua regra de firewall, pres
 Stop-ScheduledTask -TaskName 'Servitec-Sistema'
 Unregister-ScheduledTask -TaskName 'Servitec-Sistema' -Confirm:$false
 Remove-NetFirewallRule -Name 'Servitec-Sistema-LAN-3000'
+Remove-NetFirewallRule -Name 'Servitec-Clientes-LAN-3001'
 ```
 
 
@@ -78,7 +79,7 @@ Entre como administrador e abra **Usuários e permissões**. Use **Novo usuário
 
 A tabela acima descreve os perfis iniciais. Em **Configurações → Permissões**, o administrador pode alterar os acessos de Técnico e Consulta e criar perfis personalizados. As permissões de gerenciar usuários, permissões e sistema permanecem exclusivas do Administrador e não podem ser desmarcadas nele. Dependências entre consultar e alterar são validadas no servidor.
 
-Os perfis se aplicam a todos os dados do sistema: ainda não há separação por empresa, setor ou solicitante. Controle remoto continua pendente. Alterações de senha, perfil ou situação encerram as sessões da conta afetada. O sistema impede desativar ou rebaixar o último administrador ativo. **Minha senha**, no topo da tela, permite alterar sua senha e exige novo login.
+Os perfis internos se aplicam a todos os dados do sistema. Para consulta restrita a uma empresa, use o cadastro separado em Acessos de clientes e o Painel do Cliente na porta dedicada. Controle remoto continua pendente. Alterações de senha, perfil ou situação encerram as sessões da conta afetada. O sistema impede desativar ou rebaixar o último administrador ativo. **Minha senha**, no topo da tela, permite alterar sua senha e exige novo login.
 
 ### Atualizar uma instalação existente
 
@@ -244,13 +245,25 @@ Em **Salvar filtros e apresentação como modelo pessoal**, informe um nome. O m
 
 Os modelos ficam no banco de dados, vinculados ao usuário, e continuam disponíveis após recarregar a página ou acessar de outro computador. Cada usuário vê apenas os próprios modelos e os tipos que pode consultar. Há um limite de cinquenta modelos por usuário; para alterar um modelo existente, salve com outro nome ou exclua a versão anterior. A migração apenas acrescenta a tabela de modelos e preserva os dados existentes.
 
+### Painel do Cliente em outra porta
+
+Um único `npm start` inicia o sistema interno e o painel em duas portas, usando o mesmo banco. A porta interna atual é preservada. O painel utiliza `CLIENT_PORT=3001` por padrão e `CLIENT_HOST` opcional (herda `HOST`). As portas precisam ser diferentes e estar livres; se uma não puder abrir, o processo encerra com erro no log. `CLIENT_PORT=0` é reservado a testes com porta temporária.
+
+O painel tem login e sessões independentes, tema claro, navegação própria, filtros e gráficos. Operador e cliente podem manter sessões simultâneas no mesmo navegador. Cookies e sessões são verificados para a entrada correspondente; trocar de porta não concede acesso ao outro sistema.
+
+Em **Acessos de clientes**, o administrador encontra o endereço para entregar ao cliente. Para domínio/proxy HTTPS, defina `CLIENT_PUBLIC_URL` com a URL pública real, sem caminho; por exemplo, `https://clientes.suaempresa.com.br`. Sem essa variável, é sugerido o endereço HTTP do servidor com a porta dedicada. A variável apenas informa a URL: não configura DNS, certificado ou proxy. `CLIENT_COOKIE_SECURE` permite ajustar o cookie do painel separadamente; se ausente, herda `COOKIE_SECURE`.
+
+**Windows Server já instalado:** atualize com `git pull --ff-only` e execute **liberar-painel-cliente.bat** como administrador. O BAT reinicia a tarefa `Servitec-Sistema`, quando existente, e libera apenas a porta 3001 para a rede local, sem regravar a tarefa ou mudar sua porta interna. Se a execução for manual, reinicie o processo antes de rodar o BAT. Para porta personalizada, ajuste `CLIENT_PORT` no ambiente da aplicação e configure a regra correspondente. O instalador completo de início automático também foi atualizado para as duas portas padrão.
+
+Para acesso pela internet, configure domínio e HTTPS no proxy, encaminhando o painel para sua porta dedicada. O BAT de LAN não publica HTTPS. Consulte [configuração e diagnóstico do Painel do Cliente](docs/PAINEL-DO-CLIENTE.md).
+
 ### Portal de clientes: acesso somente à própria empresa
 
 Como administrador, abra **Acessos de clientes** no menu principal e clique em **Novo acesso**. Informe nome, e-mail, senha e a empresa autorizada. Cadastre a empresa previamente em **Equipamentos → Nova empresa/token**, se necessário. É possível criar vários acessos para a mesma empresa.
 
-O cliente entra pelo mesmo endereço e pela mesma tela de login da plataforma. Entregue as credenciais pelo seu canal habitual; o cadastro não envia mensagens automaticamente. Use esse menu para clientes: o perfil interno **Visualizador** continua destinado à equipe e não restringe os dados a uma empresa.
+O cliente entra pelo endereço dedicado do **Painel do Cliente**, na porta **3001** por padrão, com tela própria e visual claro. A porta do sistema interno continua sendo a configurada em `PORT` (padrão 3000). Contas de clientes não fazem login na entrada interna, e contas de operadores não fazem login no painel do cliente. Entregue as credenciais pelo seu canal habitual; o cadastro não envia mensagens automaticamente. Use esse menu para clientes: o perfil interno **Visualizador** continua destinado à equipe e não restringe os dados a uma empresa.
 
-O portal apresenta **Dashboard** e **Meus chamados**, com totais por situação, gráficos de barras ou disco por mês, situação, modalidade e prioridade, filtros por período, situação e texto, detalhes e paginação de vinte chamados. A atualização automática ocorre a cada dez segundos enquanto a página está visível. O acesso permite apenas consulta e alteração da própria senha; não permite criar ou editar chamados, acessar equipamentos, usuários, configurações ou relatórios internos.
+O painel apresenta **Visão geral** e **Meus chamados**, com totais por situação, gráficos de barras ou disco por mês, situação, modalidade e prioridade, filtros por período, situação e texto, detalhes e paginação de vinte chamados. A atualização automática ocorre a cada dez segundos enquanto a página está visível. O acesso permite apenas consulta e alteração da própria senha; não permite criar ou editar chamados, acessar equipamentos, usuários, configurações ou relatórios internos.
 
 Cada acesso consulta exclusivamente os chamados vinculados à empresa escolhida, com validação no servidor em todas as consultas. Vincule os chamados à empresa no cadastro ou na lista interna: registros antigos sem empresa não aparecem no portal. Alterar filtros ou endereços manualmente não permite consultar outra empresa.
 

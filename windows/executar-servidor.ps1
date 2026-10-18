@@ -4,6 +4,7 @@ $project = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $project
 $env:HOST = '0.0.0.0'
 $env:PORT = '3000'
+$env:CLIENT_PORT = '3001'
 # Acesso HTTP apenas na rede local. HTTPS usa outra configuracao.
 $env:COOKIE_SECURE = '0'
 $env:DATA_DIR = Join-Path $project 'data'

@@ -18,7 +18,7 @@ test('CSV reconhece UTF-8, aspas, separadores e recusa arquivos inconsistentes',
 
 test('configurações persistem, permissões bloqueiam API, importação é repetível e backup restaura',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'sistema-config-'));let child;
- const start=async()=>{child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3203',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});await Promise.race([once(child.stdout,'data'),once(child,'exit').then(()=>{throw Error('Falha ao iniciar');}),new Promise((_,r)=>setTimeout(()=>r(Error('Timeout')),5000).unref())]);};
+ const start=async()=>{child=spawn(process.execPath,['server.mjs'],{env:{...process.env,CLIENT_PORT:'0',PORT:'3203',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});await Promise.race([once(child.stdout,'data'),once(child,'exit').then(()=>{throw Error('Falha ao iniciar');}),new Promise((_,r)=>setTimeout(()=>r(Error('Timeout')),5000).unref())]);};
  const stop=async()=>{child.kill();await once(child,'exit');child=null;};
  const raw=(path,method='GET',body,cookie='')=>fetch('http://127.0.0.1:3203'+path,{method,headers:{'Content-Type':'application/json',Cookie:cookie},body:body===undefined?undefined:JSON.stringify(body)});
  const call=async(path,method='GET',body,cookie='')=>{const r=await raw('/api/'+path,method,body,cookie);return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};};
@@ -85,7 +85,7 @@ test('configurações persistem, permissões bloqueiam API, importação é repe
  const backupPath=join(dir,'download.sqlite');writeFileSync(backupPath,Buffer.from(await backup.arrayBuffer()));const copy=new DatabaseSync(backupPath);
  assert.equal(copy.prepare('PRAGMA integrity_check').get().integrity_check,'ok');assert.equal(copy.prepare('SELECT count(*) n FROM sessions').get().n,0);assert.equal(copy.prepare('SELECT count(*) n FROM assets').get().n,2);assert.ok(copy.prepare('SELECT value FROM settings WHERE key=?').get('company').value.includes('Empresa de Teste'));copy.close();
  const restoreDir=mkdtempSync(join(tmpdir(),'sistema-restore-'));copyFileSync(backupPath,join(restoreDir,'sistema.db'));
- const restored=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3204',DATA_DIR:restoreDir},stdio:['ignore','pipe','pipe']});
+ const restored=spawn(process.execPath,['server.mjs'],{env:{...process.env,CLIENT_PORT:'0',PORT:'3204',DATA_DIR:restoreDir},stdio:['ignore','pipe','pipe']});
  try{await Promise.race([once(restored.stdout,'data'),once(restored,'exit').then(()=>{throw Error('Falha ao restaurar');}),new Promise((_,r)=>setTimeout(()=>r(Error('Restore timeout')),5000).unref())]);
  const restoredLogin=await fetch('http://127.0.0.1:3204/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'admin@example.test',password})});assert.equal(restoredLogin.status,200);
  const restoredCookie=restoredLogin.headers.get('set-cookie').split(';')[0];const restoredAssets=await fetch('http://127.0.0.1:3204/api/assets',{headers:{Cookie:restoredCookie}});assert.equal((await restoredAssets.json()).length,2);

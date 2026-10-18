@@ -8,7 +8,7 @@ import {once} from 'node:events';
 import {DatabaseSync} from 'node:sqlite';
 import {scryptSync} from 'node:crypto';
 async function start(dir,port){
- const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:String(port),DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
+ const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,CLIENT_PORT:'0',PORT:String(port),DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
  await Promise.race([once(child.stdout,'data'),once(child,'exit').then(()=>{throw Error('Servidor encerrou no início');}),new Promise((_,reject)=>setTimeout(()=>reject(Error('Startup timeout')),5000).unref())]);
  const request=async(path,method='GET',data,cookie='')=>{const res=await fetch(`http://127.0.0.1:${port}/api/${path}`,{method,headers:{'Content-Type':'application/json',Cookie:cookie},body:data?JSON.stringify(data):undefined});return {status:res.status,data:await res.json(),cookie:res.headers.get('set-cookie')?.split(';')[0]};};
  return {request,stop:async()=>{child.kill();await once(child,'exit');}};

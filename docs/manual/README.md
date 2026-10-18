@@ -3,7 +3,7 @@
 - [Baixar o manual editável em Word](Manual-do-Usuario-SERVITEC-VSA.docx)
 - [Ler o manual em PDF](Manual-do-Usuario-SERVITEC-VSA.pdf)
 
-Edição 1.0, de 18/10/2026. O PDF tem 20 páginas. Inclui capa, sumário, oito imagens da aplicação e instruções para administradores, operadores e clientes. Referência funcional: revisão `577c433`.
+Edição 1.1, de 18/10/2026. O PDF tem 20 páginas. Inclui capa, sumário, oito imagens da aplicação e instruções para administradores, operadores e clientes. Atualizado para a entrada exclusiva do Painel do Cliente, na porta padrão 3001, com visual próprio.
 
 As telas foram capturadas em uma instância isolada com dados fictícios. Não há tokens, senhas ou informações de clientes reais nos documentos. A atualização do manual não altera a aplicação nem o banco de produção.
 

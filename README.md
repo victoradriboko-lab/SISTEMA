@@ -175,3 +175,11 @@ Nomes iguais dentro da mesma empresa são sinalizados como **possíveis duplicad
 Para renovar, selecione a empresa e clique em **Renovar token da empresa**, confirmando sua senha. O token anterior deixa de funcionar para todos os agentes desse cliente; reinstale/configure os agentes com o novo token. Equipamentos e históricos permanecem. O token permite enviar dados de novas máquinas para aquela empresa; compartilhe-o somente com quem instala seus agentes.
 
 Após atualizar o servidor, os agentes existentes continuam funcionando com seus tokens individuais. Para usar o modelo por empresa, configure novamente o agente com o token da empresa e revise eventuais duplicados com os cadastros antigos depois de vinculá-los. O instalador atualizado já pede o token da empresa.
+
+### Dashboard após o login
+
+O login abre o **Dashboard** com saudação, horário da última atualização e oito indicadores: clientes, equipamentos, agentes online, equipamentos sem comunicação, chamados abertos, em atendimento, resolvidos e equipamentos em alerta. Também apresenta conectividade, distribuição dos chamados por situação, até seis clientes com mais equipamentos, alertas operacionais e os cinco últimos chamados.
+
+Os dados vêm dos cadastros e da telemetria reais, conforme as permissões do usuário. Máquinas que nunca se comunicaram aparecem separadas das que ficaram offline. Alertas de recursos consideram apenas equipamentos online com CPU, memória ou algum disco a partir de 90%; chamados atrasados seguem as regras de atendimento configuradas. Sem dados, o painel mostra orientações; sem permissão, mostra informação indisponível, sem inventar valores.
+
+Os dados são atualizados a cada dez segundos enquanto a aba está visível. Clicar num cliente abre o inventário filtrado, e o alerta de equipamento abre seus detalhes no monitoramento. A entrega não altera cadastros, tokens ou o banco de dados. Para atualizar a instalação, execute `git pull`, reinicie o sistema e recarregue o navegador com **Ctrl+F5**.

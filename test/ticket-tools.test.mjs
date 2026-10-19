@@ -1,0 +1,50 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {once} from 'node:events';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
+
+test('novos recursos preservam tickets, validam lote integral e isolam permissões e itens',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ticket-tools-'));let child,base,db;
+ const start=async()=>{child=spawn(process.execPath,['server.mjs'],{env:{...process.env,DATA_DIR:dir,HOST:'127.0.0.1',PORT:'0',CLIENT_PORT:'0'},stdio:['ignore','pipe','pipe']});const [out]=await once(child.stdout,'data');const ports=out.toString().match(/porta (\d+); Painel do Cliente na porta (\d+)/);base='http://127.0.0.1:'+ports[1];return 'http://127.0.0.1:'+ports[2];};
+ const stop=async()=>{const exited=once(child,'exit');child.kill();await exited;child=null;};
+ const call=async(path,method='GET',body,cookie='',origin=base)=>{const res=await fetch(origin+'/api/'+path,{method,headers:{'Content-Type':'application/json',Cookie:cookie},body:body===undefined?undefined:JSON.stringify(body)});return {status:res.status,data:await res.json(),cookie:res.headers.get('set-cookie')?.split(';')[0]};};
+ try{
+  const portal=await start(),password='Teste123';await call('setup','POST',{name:'Admin',email:'admin@example.test',password});const admin=(await call('login','POST',{email:'admin@example.test',password})).cookie;
+  const ca=(await call('clients','POST',{name:'Empresa Alpha'},admin)).data,cb=(await call('clients','POST',{name:'Empresa Beta'},admin)).data;
+  const contract={enabled:true,monthly:0,hourCost:0,includedHours:0,calendar:'24x7',zone:'America/Sao_Paulo',targets:Object.fromEntries(['Baixa','Média','Alta','Crítica'].map(k=>[k,{response:60,resolution:480}]))};assert.equal((await call('desk/companies/'+ca.id,'PUT',{contract},admin)).status,200);
+  const a=(await call('tickets','POST',{title:'Preservar Alpha',description:'Histórico original',priority:'Alta',clientId:ca.id},admin)).data,b=(await call('tickets','POST',{title:'Preservar Beta',priority:'Baixa',clientId:cb.id},admin)).data;
+  const path='ticket-tools/tickets/'+a.id,other='ticket-tools/tickets/'+b.id;
+  assert.equal((await call(path,'GET',undefined,admin)).data.checklist.length,0);
+  assert.equal((await call(path+'/checklist','POST',{label:'Conferir backup'},admin)).status,200);const checklist=(await call(path,'GET',undefined,admin)).data.checklist[0];
+  assert.equal((await call(other+'/checklist/'+checklist.id,'PATCH',{done:true},admin)).status,404);
+  assert.equal((await call(path+'/checklist/'+checklist.id,'PATCH',{done:true},admin)).status,200);
+  assert.equal((await call(path+'/parts','POST',{name:'SSD',quantity:2,unitPrice:125.55},admin)).status,200);
+  assert.equal((await call(path+'/parts','POST',{name:'Inválido',quantity:0,unitPrice:-1},admin)).status,400);
+  assert.equal((await call(path+'/followers','POST',{userId:1},admin)).status,200);
+  assert.equal((await call(path,'PATCH',{category:'Infraestrutura',subcategory:'Disco',progress:50,priority:'Crítica'},admin)).status,200);
+  assert.equal((await call(path+'/knowledge','POST',{title:'Procedimento',content:'Passos de manutenção'},admin)).status,200);const article=(await call(path,'GET',undefined,admin)).data.knowledge[0];assert.equal((await call(other+'/knowledge','POST',{articleId:article.id},admin)).status,200);assert.equal((await call(path+'/knowledge/'+article.id,'DELETE',undefined,admin)).status,200);assert.equal((await call(other,'GET',undefined,admin)).data.knowledge[0].content,'Passos de manutenção');
+  const assetA=(await call('assets','POST',{name:'PC Alpha',clientId:ca.id},admin)).data,assetB=(await call('assets','POST',{name:'PC Beta',clientId:cb.id},admin)).data;assert.equal((await call(path,'PATCH',{assetId:assetB.id},admin)).status,400);assert.equal((await call(path,'PATCH',{assetId:assetA.id},admin)).status,200);const move=await call('tickets/'+a.id,'PATCH',{clientId:cb.id},admin);assert.equal(move.status,409);assert.match(move.data.error,/Desvincule/);
+  const before=(await call('desk/tickets/'+a.id,'GET',undefined,admin)).data.ticket;assert.equal(before.title,'Preservar Alpha');assert.equal(before.description,'Histórico original');
+  assert.equal((await call('ticket-tools/bulk','POST',{ids:[a.id,999999],patch:{priority:'Baixa'}},admin)).status,404);
+  assert.equal((await call('desk/tickets/'+a.id,'GET',undefined,admin)).data.ticket.priority,'Crítica');
+  assert.equal((await call('ticket-tools/bulk','POST',{ids:[a.id,b.id],patch:{status:'Em atendimento'}},admin)).status,400);
+  assert.equal((await call('desk/tickets/'+a.id,'GET',undefined,admin)).data.ticket.status,'Aberto');
+  assert.equal((await call('ticket-tools/bulk','POST',{ids:[a.id,b.id],patch:{status:'Em atendimento',serviceType:'Interno'}},admin)).status,200);
+  await call(path+'/parts','POST',{name:'Temporário',quantity:1,unitPrice:0},admin);const removable=(await call(path,'GET',undefined,admin)).data.parts.at(-1);assert.equal((await call(other+'/parts/'+removable.id,'DELETE',undefined,admin)).status,404);assert.equal((await call(path+'/parts/'+removable.id,'DELETE',undefined,admin)).status,200);
+  assert.equal((await call(path+'/followers/1','DELETE',undefined,admin)).status,200);assert.equal((await call(path,'GET',undefined,admin)).data.followers.length,0);await call(path+'/followers','POST',{userId:1},admin);
+  const extra=(await call(path,'GET',undefined,admin)).data;assert.equal(extra.checklist[0].done,1);assert.equal(extra.parts[0].unit_cents,12555);assert.equal(extra.followers[0].user_id,1);
+  assert.equal((await call(path+'/recalculate','POST',{confirm:false},admin)).status,400);
+  await call('users','POST',{name:'Consulta',email:'viewer@example.test',password,role:'viewer'},admin);const viewer=(await call('login','POST',{email:'viewer@example.test',password})).cookie;
+  assert.equal((await call(path,'GET',undefined,viewer)).status,200);assert.equal((await call(path+'/checklist','POST',{label:'Negado'},viewer)).status,403);assert.equal((await call('ticket-tools/bulk','POST',{ids:[a.id],patch:{title:'Negado'}},viewer)).status,403);
+  await call('client-access','POST',{name:'Cliente',email:'client@example.test',password,clientId:ca.id},admin);const customer=(await call('login','POST',{email:'client@example.test',password},'',portal)).cookie;
+  assert.equal((await call(path,'GET',undefined,customer,portal)).status,403);
+  const previousSla=(await call('desk/tickets/'+a.id,'GET',undefined,admin)).data.ticket.sla;assert.ok(previousSla.responded_at);assert.equal((await call(path+'/recalculate','POST',{confirm:true},admin)).status,200);assert.equal((await call('desk/tickets/'+a.id,'GET',undefined,admin)).data.ticket.sla.responded_at,previousSla.responded_at);
+  const snapshot=(await call('desk/tickets/'+a.id,'GET',undefined,admin)).data;
+  await stop();await start();const after=(await call('desk/tickets/'+a.id,'GET',undefined,admin)).data;assert.deepEqual(after,snapshot);assert.deepEqual((await call(path,'GET',undefined,admin)).data.checklist,extra.checklist);
+  db=new DatabaseSync(join(dir,'sistema.db'));assert.equal(db.prepare('SELECT count(*) AS n FROM tickets').get().n,2);assert.equal(db.prepare('SELECT count(*) AS n FROM ticket_parts').get().n,1);
+ }finally{db?.close();if(child)await stop();rmSync(dir,{recursive:true,force:true});}
+});

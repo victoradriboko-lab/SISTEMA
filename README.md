@@ -386,3 +386,20 @@ As entradas interna e do Painel do Cliente utilizam somente e-mail e senha, incl
 ### Página inicial operacional
 
 Após o login, o dashboard mostra cartões compactos e coloridos de chamados, SLA, inventário e recursos. Os filtros de cliente, prioridade e operador usam os registros existentes e respeitam as permissões. A previsão de SLA considera a próxima meta com vencimento em até uma hora. Somente indicadores disponíveis no sistema são exibidos; nenhuma informação é gravada no banco por esses filtros. Antes do login, menu e busca ficam ocultos, e o topo indica Entrar.
+
+### Tickets: listagem e atendimento
+
+Em **Tickets → Chamados**, use busca por número, assunto, descrição, cliente, contato ou operador. Combine filtros de situação, prioridade, empresa, operador, atendimento, categoria, período de criação e SLA. Clique nos cabeçalhos para ordenar. O botão **Abrir**, o número ou o assunto abrem o ticket.
+
+O atendimento organiza o histórico e as conversas à esquerda, com abas para mensagens, anexos, horas, base de conhecimento, e-mails, checklist, peças e seguidores. À direita ficam empresa, operador, atendimento, situação, classificação, prioridade, dispositivo e progresso. Cada formulário possui seu próprio botão de salvar. Rascunhos das outras áreas são preservados ao salvar uma mensagem ou formulário.
+
+- **Checklist:** adicionar, concluir, reabrir e remover itens.
+- **Seguidores:** vincular membros ativos da equipe interna; o cadastro não envia e-mails automaticamente.
+- **Peças:** registrar nome, quantidade, preço unitário em centavos e observações, com total calculado. O registro não gera cobrança nem baixa de estoque.
+- **Conhecimento:** criar artigos internos e vinculá-los a tickets; desvincular um artigo preserva o artigo e seus demais vínculos.
+- **E-mail:** consultar mensagens recebidas e a fila de saída já vinculadas ao ticket. O envio continua seguindo a configuração existente.
+- **Classificação:** assunto, descrição, categoria, subcategoria, contato, unidade, tipo, prioridade, dispositivo da mesma empresa e progresso de 0 a 100.
+- **Atualização em massa:** marque os tickets (ou selecione a página), abra **Atualizar em massa**, preencha somente o que deseja alterar e aplique. Até 100 tickets por operação; a validação ocorre antes da gravação e o lote é salvo em transação. Um erro impede a atualização de todo o lote. Não há exclusão em massa.
+- **SLA:** em **Classificação e progresso → Recalcular SLA**, a confirmação aplica o contrato atual a partir de agora, preservando registros de resposta e resolução. Exige permissão de gerenciar contratos. Mudar prioridade não recalcula automaticamente prazos antigos.
+
+A migração é aditiva e repetível: acrescenta colunas opcionais e tabelas novas sem substituir dados existentes. As novas funções de escrita exigem `tickets.write`; a leitura exige `tickets.read`. Dados internos, notas, seguidores, peças e conhecimento não são expostos nas novas rotas do portal do cliente. A atualização não executa ações em massa, recálculos ou edição de chamados automaticamente.

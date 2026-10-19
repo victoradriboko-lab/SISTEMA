@@ -1,3 +1,4 @@
+import {createTicketTools} from './ticket-tools.mjs';
 import {createDeviceSupport} from './device-support.mjs';
 import {createServiceDesk} from './service-desk.mjs';
 import {createOperations} from './operations.mjs';
@@ -52,6 +53,7 @@ const reportModels=createReportModels({db,body,json,config});
 const reports=createReports({db,json,config});
 const clientAccess=createClientAccess({db,body,json,config,hash,validEmail,validPassword,portalURL});
 const desk=createServiceDesk({db,body,json,config});
+const ticketTools=createTicketTools({db,json,body,config,desk,reports});
 const deviceSupport=createDeviceSupport({db,body,json,config,desk});
 const security=createSecurity({db,body,json,config,check,dataDir});
 const operations=createOperations({db,body,json,config,desk});
@@ -92,6 +94,7 @@ if(customer&&path.startsWith('/api/security/'))return json(res,403,{error:'O Pai
 if(await security.handle(req,res,path,session))return;
 if(await desk.handle(req,res,path,session,customer))return;
 if(customer){await clientPortal.handle(req,res,path,session);return;}
+if(await ticketTools.handle(req,res,path,session))return;
 if(await deviceSupport.handle(req,res,path,session))return;
 if(await operations.handle(req,res,path,session))return;
 if(await mail.handle(req,res,path,session))return;
@@ -135,13 +138,14 @@ return json(res,404,{error:'Rota não encontrada'});
 }
 if((path==='/api/tickets'||path.startsWith('/api/tickets/'))&&!config.allowed(session,req.method==='GET'?'tickets.read':'tickets.write'))return json(res,403,{error:'Sem permissão para acessar ou alterar chamados'});
 if((path==='/api/assets'||path.startsWith('/api/assets/'))&&!config.allowed(session,req.method==='GET'?'assets.read':'assets.write'))return json(res,403,{error:'Sem permissão para acessar ou alterar equipamentos'});
-if(path==='/api/tickets'&&req.method==='GET')return json(res,200,db.prepare('SELECT t.*,c.name AS client_name,u.name AS operator_name,em.sender AS email_sender FROM tickets t LEFT JOIN clients c ON c.id=t.client_id LEFT JOIN users u ON u.id=t.operator_id LEFT JOIN email_messages em ON em.id=(SELECT min(id) FROM email_messages WHERE ticket_id=t.id) ORDER BY t.id DESC').all().map(t=>desk.decorate(config.ticketAlert(t))));
+if(path==='/api/tickets'&&req.method==='GET')return json(res,200,db.prepare('SELECT t.*,(SELECT count(*) FROM ticket_checklist WHERE ticket_id=t.id) AS checklist_total,(SELECT count(*) FROM ticket_checklist WHERE ticket_id=t.id AND done=1) AS checklist_done,(SELECT count(*) FROM ticket_parts WHERE ticket_id=t.id) AS part_count,c.name AS client_name,u.name AS operator_name,em.sender AS email_sender FROM tickets t LEFT JOIN clients c ON c.id=t.client_id LEFT JOIN users u ON u.id=t.operator_id LEFT JOIN email_messages em ON em.id=(SELECT min(id) FROM email_messages WHERE ticket_id=t.id) ORDER BY t.id DESC').all().map(t=>desk.decorate(config.ticketAlert(t))));
 if(path==='/api/tickets'&&req.method==='POST'){const b=await body(req);if(!str(b.title)||!['Baixa','Média','Alta','Crítica'].includes(b.priority))return json(res,400,{error:'Título e prioridade válidos são obrigatórios'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const operatorId=b.operatorId===undefined||b.operatorId===null||b.operatorId===''?null:Number(b.operatorId);if(operatorId!==null&&(!Number.isSafeInteger(operatorId)||!reports.canAssignOperator(operatorId)))return json(res,400,{error:'Selecione um operador ativo com permissão de atender chamados'});const serviceType=b.serviceType===undefined||b.serviceType===null||b.serviceType===''?null:b.serviceType;if(serviceType!==null&&!['Interno','Externo'].includes(serviceType))return json(res,400,{error:'Tipo de atendimento deve ser Interno ou Externo'});const row=db.prepare('INSERT INTO tickets(title,description,priority,status_since,client_id,operator_id,service_type) VALUES(?,?,?,CURRENT_TIMESTAMP,?,?,?)').run(str(b.title),str(b.description,5000),b.priority,clientId,operatorId,serviceType);desk.opened(Number(row.lastInsertRowid),session);config.audit(session,'tickets.create',`Chamado #${row.lastInsertRowid} criado`);return json(res,201,{id:Number(row.lastInsertRowid)});}
 if(/^\/api\/tickets\/\d+$/.test(path)&&req.method==='PATCH'){
-const b=await body(req),id=Number(path.split('/').pop()),ticket=db.prepare('SELECT id,status,client_id,operator_id,service_type FROM tickets WHERE id=?').get(id);
+const b=await body(req),id=Number(path.split('/').pop()),ticket=db.prepare('SELECT id,status,client_id,operator_id,service_type,asset_id FROM tickets WHERE id=?').get(id);
 if(!ticket)return json(res,404,{error:'Chamado não encontrado'});
 if(b.status===undefined&&b.clientId===undefined&&b.operatorId===undefined&&b.serviceType===undefined)return json(res,400,{error:'Informe status, cliente, operador ou tipo de atendimento'});
 const status=b.status??ticket.status,clientId=b.clientId===undefined?ticket.client_id:b.clientId===null||b.clientId===''?null:Number(b.clientId);
+if(clientId!==ticket.client_id&&ticket.asset_id)return json(res,409,{error:'Desvincule o dispositivo na classificação do ticket antes de trocar a empresa.'});
 if(clientId!==ticket.client_id&&(db.prepare("SELECT 1 FROM ticket_events WHERE ticket_id=? AND kind IN ('message','attachment') LIMIT 1").get(id)||db.prepare('SELECT 1 FROM ticket_work WHERE ticket_id=? LIMIT 1').get(id)))return json(res,409,{error:'Chamado com conversas, anexos ou horas não pode trocar de empresa. Crie um novo chamado para preservar o histórico.'});
 if(!['Aberto','Em atendimento','Resolvido'].includes(status))return json(res,400,{error:'Status inválido'});
 if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});
@@ -154,7 +158,7 @@ desk.updated(id,session,ticket);config.audit(session,'tickets.update',`Chamado #
 
 if(path==='/api/assets'&&req.method==='POST'){const b=await body(req);if(!str(b.name))return json(res,400,{error:'Nome obrigatório'});const code=str(b.code,81)||null;if(code&&code.length>80)return json(res,400,{error:'Código deve ter até 80 caracteres'});if(code&&db.prepare('SELECT id FROM assets WHERE code=?').get(code))return json(res,409,{error:'Código de equipamento já cadastrado'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const token=randomBytes(32).toString('hex');const row=db.prepare('INSERT INTO assets(name,owner,os,token,code,client_id) VALUES(?,?,?,?,?,?)').run(str(b.name),str(b.owner),str(b.os),token,code,clientId);config.audit(session,'assets.create',`Equipamento #${row.lastInsertRowid} cadastrado`);return json(res,201,{id:Number(row.lastInsertRowid),...(clientId?{}:{token})});}
 return json(res,404,{error:'Rota não encontrada'});}
-const files=customer?['/list-pages.js','/workspace-tabs.js','/desk.js','/security-ui.js','/','/theme.js','/theme.css','/customer-app.js','/customer.css','/client-portal.js','/reports.js']:[ '/sidebar.css','/list-pages.js','/navigation.js','/workspace-tabs.js','/support-devices.js','/contract-billing.js','/desk.js','/service-ui.js','/security-ui.js','/', '/mail.js','/mail-settings.js','/mail.css','/theme.js','/theme.css','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/style.css'];
+const files=customer?['/list-pages.js','/workspace-tabs.js','/desk.js','/security-ui.js','/','/theme.js','/theme.css','/customer-app.js','/customer.css','/client-portal.js','/reports.js']:[ '/ticket-extras.js','/tickets-list.js','/sidebar.css','/list-pages.js','/navigation.js','/workspace-tabs.js','/support-devices.js','/contract-billing.js','/desk.js','/service-ui.js','/security-ui.js','/', '/mail.js','/mail-settings.js','/mail.css','/theme.js','/theme.css','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/style.css'];
 if(req.method==='GET'&&files.includes(path)){const name=path==='/'?(customer?'customer.html':'index.html'):path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
 json(res,404,{error:'Não encontrado'});
 }catch(err){json(res,err.status||400,{error:err.status?err.message:'Não foi possível processar a solicitação'});}};

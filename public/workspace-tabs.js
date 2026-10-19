@@ -27,11 +27,21 @@ export function organizeCompanyForm(form){
  const items=definitions.filter(([key])=>panels.get(key).childElementCount).map(([key,label])=>{const panel=panels.get(key);panel.className='company-fields';if(key==='equipment'){panel.dataset.equipmentPage='true';panel.classList.add('equipment-page');}fieldset.append(panel);return {key,label,panel};});
  mountTabs(form,items);if(footer.childElementCount){footer.querySelector('button').textContent='Salvar todas as alterações';const status=document.createElement('span');status.className='workspace-draft';status.setAttribute('role','status');status.textContent='Salva o cadastro completo.';footer.append(status);form.insertBefore(footer,fieldset);for(const event of ['input','change'])form.addEventListener(event,event=>{if(event.target.matches('[data-page-select]'))return;form.dataset.dirty='true';status.textContent='Alterações não salvas';});}
 }
-export function organizeTicket(root,active){
+export function organizeTicket(root,active,extraItems=[]){
  const panels=[...root.children],history=panels[1],attachments=document.createElement('div');attachments.className='panel';const heading=history.querySelector('h3');if(heading){let node=heading;while(node){const next=node.nextSibling;attachments.append(node);node=next;}}
  const items=[{key:'history',label:'Histórico',panel:history}];const reply=root.querySelector('#desk-message'),files=root.querySelector('#desk-file'),work=root.querySelector('#desk-work');
  if(reply)items.push({key:'reply',label:'Mensagens e notas',panel:reply});
  if(files)attachments.append(files);items.push({key:'files',label:'Anexos',panel:attachments});
  const list=panels.at(-1),hasWorkList=list?.querySelector('h2')?.textContent==='Horas registradas';if(work||hasWorkList){const panel=document.createElement('div');if(work)panel.append(work);if(hasWorkList&&list!==work)panel.append(list);items.push({key:'work',label:'Horas e despesas',panel});}
- const holder=document.createElement('div');holder.className='ticket-workspace';items.forEach(item=>holder.append(item.panel));root.append(holder);mountTabs(holder,items,{active});paginateElements(history,[...history.querySelectorAll('article')],{pageSize:5});paginateElements(attachments,[...attachments.querySelectorAll(':scope > p')]);if(hasWorkList)paginateElements(list,[...list.querySelectorAll(':scope > p')]);
+ items.push(...extraItems);
+ const holder=document.createElement('div');holder.className='ticket-workspace';items.forEach(item=>holder.append(item.panel));root.append(holder);mountTicketTabs(holder,items,active);paginateElements(history,[...history.querySelectorAll('article')],{pageSize:5});paginateElements(attachments,[...attachments.querySelectorAll(':scope > p')]);if(hasWorkList)paginateElements(list,[...list.querySelectorAll(':scope > p')]);
+}
+
+function mountTicketTabs(holder,items,active){
+ const bar=document.createElement('div');bar.className='ticket-tabs';bar.setAttribute('role','tablist');bar.setAttribute('aria-label','Conteúdo do ticket');
+ const prefix='ticket-tabs-'+(++nextId);
+ const activate=key=>{if(!items.some(item=>item.key===key))key=items[0].key;holder.dataset.activeTab=key;for(const item of items){const selected=item.key===key;item.panel.hidden=!selected;item.button.setAttribute('aria-selected',String(selected));item.button.tabIndex=selected?0:-1;}};
+ items.forEach((item,index)=>{const button=document.createElement('button');button.type='button';button.textContent=item.label;button.id=prefix+'-'+item.key;button.dataset.ticketTab=item.key;button.setAttribute('role','tab');if(!item.panel.id)item.panel.id=prefix+'-panel-'+item.key;button.setAttribute('aria-controls',item.panel.id);item.panel.setAttribute('role','tabpanel');item.panel.setAttribute('aria-labelledby',button.id);item.panel.classList.add('ticket-tab-panel');button.onclick=()=>activate(item.key);button.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?items.length-1:(index+(e.key==='ArrowRight'?1:-1)+items.length)%items.length;activate(items[next].key);items[next].button.focus();};item.button=button;bar.append(button);});
+ holder.prepend(bar);holder.activatePage=activate;activate(active||items[0].key);
+ holder.addEventListener('invalid',e=>{const item=items.find(item=>item.panel.contains(e.target));if(item)activate(item.key);},true);
 }

@@ -365,3 +365,16 @@ O menu **Download de Agentes** abre uma página própria com os pacotes Windows/
 ### Filtrar equipamentos por cliente
 
 Em **Inventário → Equipamentos**, selecione a empresa em **Filtrar inventário por cliente**. **Todos os clientes** ou **Limpar filtro** mostram o inventário completo, incluindo equipamentos sem cliente. A tela informa o total exibido e mantém o filtro durante a atualização automática. A opção **Sem cliente** mostra apenas cadastros sem vínculo.
+
+### Regra de preservação dos dados
+
+As atualizações comuns alteram o código e complementam a estrutura quando necessário, preservando os registros existentes: clientes, usuários, senhas, permissões, equipamentos, tokens, chamados, contratos, histórico e configurações. Não devem limpar ou recriar o banco nem substituir a pasta de dados. A regra para futuras alterações está em [AGENTS.md](AGENTS.md).
+
+Para atualizar o servidor Windows:
+
+1. Faça um backup consistente. Pare o sistema e a tarefa automática antes de copiar a pasta de dados inteira para um destino fora da instalação. Preserve também `security.key` e os demais arquivos desse diretório. Se utiliza `DATA_DIR`, use esse destino real.
+2. Na pasta `C:\Servitec\SISTEMA`, execute `git pull --ff-only`. Se houver conflito com alterações locais, interrompa a atualização e revise o conflito; não descarte arquivos automaticamente.
+3. Execute `npm ci --omit=dev`, mantendo o mesmo `DATA_DIR`, portas, variáveis e conta de execução.
+4. Inicie o sistema pelo mecanismo habitual e use Ctrl+F5 no navegador. Confira clientes, usuários e equipamentos existentes.
+
+Não execute `git clean -fdx`, não apague a pasta de dados e não copie um banco de desenvolvimento sobre o banco do servidor. Uma restauração de backup é uma operação separada e substitui os dados pelo estado do backup; não faz parte da atualização normal.

@@ -13,11 +13,13 @@
 <link rel="stylesheet" href="/company-workspace.css">
 <link rel="stylesheet" href="/inventory-list.css">
 <link rel="stylesheet" href="/device-details.css">
+  <link rel="stylesheet" href="/company-brand.css">
+  <script src="/company-brand.js" defer></script>
 </head>
 <body>
   <aside aria-label="Menu principal">
     <div class="brand" aria-label="Servitec T.I.">
-      <img id="brand-logo" class="brand-logo" alt="Logotipo da empresa" hidden><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M24 3 43 14v20L24 45 5 34V14Z" stroke="currentColor" stroke-width="2"/><path d="M33 16H20l-5 8h18l-5 8H15" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M24 3v7m19 24-6-3M5 34l6-3" stroke="currentColor" stroke-width="2"/></svg></span>
+      <span class="servitec-logo-frame"><img class="servitec-logo" data-company-logo src="https://www.servitecbrasil.com.br/logo.svg" alt="Servitec" width="240" height="64" referrerpolicy="no-referrer"><span class="servitec-logo-fallback" hidden>Servitec</span></span>
       <div class="brand-wordmark"><span class="brand-caption">TECNOLOGIA DA INFORMAÇÃO</span><span class="brand-name">Servitec <small>T.I.</small></span></div>
     </div>
     <div class="sidebar-search"><label for="module-search" class="sr-only">Buscar módulos</label><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg><input id="module-search" type="search" placeholder="Buscar" autocomplete="off" aria-controls="sidebar-nav"></div><p id="module-search-empty" role="status" hidden>Nenhum módulo encontrado.</p>
@@ -63,7 +65,7 @@
 </div></div>
 <button type="button" id="agent-download" data-page="agent-downloads" hidden><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12 M7 10l5 5 5-5 M4 17v4h16v-4"/></svg><span>Download de Agentes</span></button>
 </nav>
-    <footer><span class="footer-dot" aria-hidden="true"></span> Servitec T.I.<br><small>Gestão conectada à sua TI.</small></footer>
+    <footer><span class="footer-company-logo"><span class="servitec-logo-frame"><img class="servitec-logo" data-company-logo src="https://www.servitecbrasil.com.br/logo.svg" alt="Servitec" width="240" height="64" referrerpolicy="no-referrer"><span class="servitec-logo-fallback" hidden>Servitec</span></span></span> Servitec T.I.<br><small>Gestão conectada à sua TI.</small></footer>
   </aside>
   <main>
     <header><span class="breadcrumb">Servitec T.I. <span aria-hidden="true">/</span> <b id="breadcrumb">Entrar</b></span><div class="header-actions"><span class="workspace-label">CENTRAL DE OPERAÇÕES</span><button id="my-password" hidden>Minha senha</button><button id="logout" hidden>Sair</button><div class="user-preferences" id="operator-preferences" hidden><div class="user-identity"><strong id="operator-name"></strong><small id="operator-role"></small></div><button type="button" class="theme-toggle" data-theme-toggle role="switch" aria-checked="false" aria-label="Modo escuro"><span class="theme-light-label">Claro</span><span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span><span class="theme-dark-label">Escuro</span></button></div></div></header>

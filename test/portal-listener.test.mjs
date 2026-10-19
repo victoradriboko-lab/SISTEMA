@@ -56,7 +56,7 @@ test('portas dedicadas isolam contas, sessões, origens e arquivos; migração p
   for(const path of ['users','clients','assets','config/backups','client-access/portal'])assert.equal((await call(portal,path,'GET',undefined,both)).status,403,path);
   assert.equal((await call(internal,'portal/overview','GET',undefined,a.cookie)).status,404);
   for(const path of ['/app.js','/settings.js','/style.css','/client-access.js'])assert.equal((await fetch(portal+path)).status,404,path);
-  assert.match(await (await fetch(portal+'/')).text(),/Painel do Cliente/);assert.match(await (await fetch(internal+'/')).text(),/Sistema Informática SERVITEC VSA/);
+  assert.match(await (await fetch(portal+'/')).text(),/Painel do Cliente/);assert.match(await (await fetch(internal+'/')).text(),/Servitec T\.I\./);
   assert.equal((await fetch(internal+'/customer-app.js')).status,404);
   await call(portal,'logout','POST',undefined,both);
   assert.equal((await call(portal,'me','GET',undefined,both)).status,401);assert.equal((await call(internal,'me','GET',undefined,both)).status,200);

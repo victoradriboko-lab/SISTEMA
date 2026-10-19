@@ -1,0 +1,20 @@
+/* Logo oficial sobre base escura: legível nos temas claro e escuro. */
+.servitec-logo-frame{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;max-width:100%;width:172px;height:58px;padding:10px 12px;border:1px solid #282828;border-radius:9px;background:#050505;vertical-align:middle;overflow:hidden}
+.servitec-logo{display:block;width:100%;height:100%;max-width:100%;object-fit:contain;object-position:center}
+.servitec-logo-fallback{color:#fff;font:600 23px Arial,Helvetica,sans-serif;letter-spacing:1px}
+:root[data-surface=internal] aside .brand{flex-direction:column;align-items:flex-start;gap:9px}
+:root[data-surface=internal] aside .brand .servitec-logo-frame{width:184px;height:62px}
+:root[data-surface=internal] aside .brand .brand-caption{display:none}
+:root[data-surface=internal] aside .brand .brand-name{font-size:13px;letter-spacing:.5px}
+:root[data-surface=internal] aside .brand .brand-name small{padding:0;border:0;font-size:13px;color:inherit}
+.auth-company-logo{margin:0 0 24px}
+.auth-company-logo .servitec-logo-frame{width:240px;height:80px}
+.customer-brand{flex-wrap:wrap;gap:12px}
+.customer-brand .servitec-logo-frame{width:156px;height:54px}
+.customer-brand strong{font-size:13px;letter-spacing:.2px}
+.customer-brand strong small{padding:0;border:0;color:inherit;font-size:inherit;margin:0}
+.footer-company-logo{display:block;margin-bottom:10px}
+.footer-company-logo .servitec-logo-frame,.customer-footer .servitec-logo-frame{width:120px;height:42px;padding:7px 10px}
+.footer-company-brand{display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+@media(max-width:760px){:root[data-surface=internal] aside .brand{flex-direction:row;align-items:center}.auth-company-logo .servitec-logo-frame{width:200px;height:68px}.customer-brand{gap:8px}.customer-brand .servitec-logo-frame{width:126px;height:46px}.customer-brand strong{font-size:11px}.customer-brand>span>span{font-size:10px}.customer-entry-label{display:none}}
+@media print{.servitec-logo-frame{print-color-adjust:exact;-webkit-print-color-adjust:exact}}

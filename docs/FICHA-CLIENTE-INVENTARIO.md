@@ -76,3 +76,12 @@ O agente 1.2.2 registra o detalhe JSON do erro sem exibir o token e registra `Pr
 ### Falha ao parar o serviço durante reinstalação
 
 O instalador 1.2.3 trata serviço já parado, inicializando, parando ou sem resposta. A recuperação de um serviço travado verifica o processo específico e seu caminho antes de encerrá-lo. Processos divergentes são preservados e a atualização é interrompida. Reinstalações conservam o identificador da máquina e não apagam a fila de amostras pendentes.
+
+
+## Portal do cliente: computadores da empresa
+
+A navegação do portal agora inclui **Computadores da empresa**. A listagem é de consulta, com busca, filtro de comunicação, paginação de 20 itens e atualização a cada 10 segundos. Mostra nome, código, responsável, sistema operacional e última comunicação. O servidor fixa a empresa pelo vínculo da sessão: não aceita consultar outra empresa e não retorna tokens, inventário bruto, cofre nem ações administrativas. Equipamentos sem empresa não aparecem no portal.
+
+A identidade Servitec T.I. usa o logo oficial em menu, telas de entrada, cabeçalho do portal e rodapés. A imagem padrão vem de `https://www.servitecbrasil.com.br/logo.svg`; portanto depende de acesso ao site no navegador. Se não carregar, aparece o nome em texto. Um logotipo já salvo em Configurações → Dados da empresa tem prioridade e é servido localmente, sem substituir a configuração existente. Nenhum dado ou token é alterado por esta atualização.
+
+Validação: testes de isolamento entre empresas, filtros, paginação, recusa de alterações e revogação de sessão após troca do vínculo, além de navegação em computador e celular. O teste de navegador simula indisponibilidade do logo remoto; não confirma o download do SVG em produção.

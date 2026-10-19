@@ -8,17 +8,20 @@
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/customer.css">
   <link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="/company-brand.css">
+  <script src="/company-brand.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#customer-content">Ir para o conteúdo</a>
   <header class="customer-header">
     <a class="customer-brand" href="/" aria-label="Início do Painel do Cliente">
-      <span class="customer-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="m16 2 12 7v14l-12 7-12-7V9Z" stroke="currentColor" stroke-width="1.8"/><path d="M22 10h-9l-4 6h14l-4 6h-9" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>
+      <span class="servitec-logo-frame"><img class="servitec-logo" data-company-logo src="https://www.servitecbrasil.com.br/logo.svg" alt="Servitec" width="240" height="64" referrerpolicy="no-referrer"><span class="servitec-logo-fallback" hidden>Servitec</span></span>
       <span><strong>Servitec <small>T.I.</small></strong><span>Painel do Cliente</span></span>
     </a>
     <nav id="customer-nav" aria-label="Navegação do cliente" hidden>
       <button data-view="dashboard" aria-current="page">Visão geral</button>
       <button data-view="tickets">Meus chamados</button>
+      <button data-view="assets">Computadores da empresa</button>
     </nav>
     <div class="customer-actions" id="customer-actions" hidden>
       <button id="customer-password">Minha senha</button><button id="customer-logout">Sair</button><div class="user-preferences"><div class="user-identity"><strong id="customer-name"></strong><small>Cliente</small></div><button type="button" class="theme-toggle" data-theme-toggle role="switch" aria-checked="false" aria-label="Modo escuro"><span class="theme-light-label">Claro</span><span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span><span class="theme-dark-label">Escuro</span></button></div>
@@ -29,7 +32,7 @@
     <div id="customer-notice" class="customer-notice" role="status" aria-live="polite" hidden></div>
     <section id="customer-content" aria-label="Painel do Cliente" tabindex="-1"></section>
   </main>
-  <footer class="customer-footer"><span>Servitec T.I. · Painel do Cliente</span><span>Transparência em cada atendimento.</span></footer>
+  <footer class="customer-footer"><span class="footer-company-brand"><span class="servitec-logo-frame"><img class="servitec-logo" data-company-logo src="https://www.servitecbrasil.com.br/logo.svg" alt="Servitec" width="240" height="64" referrerpolicy="no-referrer"><span class="servitec-logo-fallback" hidden>Servitec</span></span><span>Servitec T.I. · Painel do Cliente</span></span><span>Transparência em cada atendimento.</span></footer>
   <script type="module" src="/customer-app.js"></script>
 </body>
 </html>

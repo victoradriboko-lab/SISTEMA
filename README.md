@@ -403,3 +403,20 @@ O atendimento organiza o histórico e as conversas à esquerda, com abas para me
 - **SLA:** em **Classificação e progresso → Recalcular SLA**, a confirmação aplica o contrato atual a partir de agora, preservando registros de resposta e resolução. Exige permissão de gerenciar contratos. Mudar prioridade não recalcula automaticamente prazos antigos.
 
 A migração é aditiva e repetível: acrescenta colunas opcionais e tabelas novas sem substituir dados existentes. As novas funções de escrita exigem `tickets.write`; a leitura exige `tickets.read`. Dados internos, notas, seguidores, peças e conhecimento não são expostos nas novas rotas do portal do cliente. A atualização não executa ações em massa, recálculos ou edição de chamados automaticamente.
+
+### Menu Cadastros
+
+O menu **Cadastros** reúne as opções abaixo, conforme as permissões da conta:
+
+- **Perfis de Operadores:** abre a configuração existente de perfis e permissões, sem duplicar perfis.
+- **Operadores:** utiliza os usuários internos existentes, com criação e edição de conta e perfil.
+- **Equipes de Operadores:** mantém membros e responsável por equipe, sem alterar as permissões individuais.
+- **Clientes:** abre o mesmo cadastro de empresas e contratos do menu Clientes.
+- **Setores dos Solicitantes:** organiza setores, contato e e-mail por empresa.
+- **Feriados:** registra data, recorrência anual e empresa opcional.
+- **Expedientes:** registra modelos de dias de atendimento, horas inicial/final e fuso horário.
+- **Documentos:** guarda descrição, procedimento, categoria, link HTTP(S), empresa opcional e arquivo de até 512 KB. Uma edição sem enviar novo arquivo preserva o arquivo anterior.
+
+Os novos cadastros têm busca, edição e ativação/desativação. A desativação preserva o registro; não exclui usuários, clientes ou arquivos. Feriados e expedientes são cadastros de referência: não modificam automaticamente os contratos ou os prazos de SLA existentes. Os horários efetivos dos contratos continuam configurados na ficha da empresa.
+
+Equipes exigem `users.manage`. Setores são editados com `tickets.write`; feriados e expedientes com `contracts.manage`; documentos com `company.manage`. A leitura dos quatro últimos exige `tickets.read`. O portal do cliente não acessa as novas rotas internas. Dados novos ficam no SQLite existente, em tabelas adicionais, e entram nos backups habituais.

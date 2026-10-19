@@ -1,3 +1,4 @@
+import {createRegistrations} from './registrations.mjs';
 import {createTicketTools} from './ticket-tools.mjs';
 import {createDeviceSupport} from './device-support.mjs';
 import {createServiceDesk} from './service-desk.mjs';
@@ -53,6 +54,7 @@ const reportModels=createReportModels({db,body,json,config});
 const reports=createReports({db,json,config});
 const clientAccess=createClientAccess({db,body,json,config,hash,validEmail,validPassword,portalURL});
 const desk=createServiceDesk({db,body,json,config});
+const registrations=createRegistrations({db,json,body,config});
 const ticketTools=createTicketTools({db,json,body,config,desk,reports});
 const deviceSupport=createDeviceSupport({db,body,json,config,desk});
 const security=createSecurity({db,body,json,config,check,dataDir});
@@ -94,6 +96,7 @@ if(customer&&path.startsWith('/api/security/'))return json(res,403,{error:'O Pai
 if(await security.handle(req,res,path,session))return;
 if(await desk.handle(req,res,path,session,customer))return;
 if(customer){await clientPortal.handle(req,res,path,session);return;}
+if(await registrations.handle(req,res,path,session))return;
 if(await ticketTools.handle(req,res,path,session))return;
 if(await deviceSupport.handle(req,res,path,session))return;
 if(await operations.handle(req,res,path,session))return;
@@ -158,7 +161,7 @@ desk.updated(id,session,ticket);config.audit(session,'tickets.update',`Chamado #
 
 if(path==='/api/assets'&&req.method==='POST'){const b=await body(req);if(!str(b.name))return json(res,400,{error:'Nome obrigatório'});const code=str(b.code,81)||null;if(code&&code.length>80)return json(res,400,{error:'Código deve ter até 80 caracteres'});if(code&&db.prepare('SELECT id FROM assets WHERE code=?').get(code))return json(res,409,{error:'Código de equipamento já cadastrado'});const clientId=b.clientId?Number(b.clientId):null;if(clientId!==null&&(!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)))return json(res,400,{error:'Selecione uma empresa válida'});const token=randomBytes(32).toString('hex');const row=db.prepare('INSERT INTO assets(name,owner,os,token,code,client_id) VALUES(?,?,?,?,?,?)').run(str(b.name),str(b.owner),str(b.os),token,code,clientId);config.audit(session,'assets.create',`Equipamento #${row.lastInsertRowid} cadastrado`);return json(res,201,{id:Number(row.lastInsertRowid),...(clientId?{}:{token})});}
 return json(res,404,{error:'Rota não encontrada'});}
-const files=customer?['/list-pages.js','/workspace-tabs.js','/desk.js','/security-ui.js','/','/theme.js','/theme.css','/customer-app.js','/customer.css','/client-portal.js','/reports.js']:[ '/ticket-extras.js','/tickets-list.js','/sidebar.css','/list-pages.js','/navigation.js','/workspace-tabs.js','/support-devices.js','/contract-billing.js','/desk.js','/service-ui.js','/security-ui.js','/', '/mail.js','/mail-settings.js','/mail.css','/theme.js','/theme.css','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/style.css'];
+const files=customer?['/list-pages.js','/workspace-tabs.js','/desk.js','/security-ui.js','/','/theme.js','/theme.css','/customer-app.js','/customer.css','/client-portal.js','/reports.js']:[ '/registrations.js','/ticket-extras.js','/tickets-list.js','/sidebar.css','/list-pages.js','/navigation.js','/workspace-tabs.js','/support-devices.js','/contract-billing.js','/desk.js','/service-ui.js','/security-ui.js','/', '/mail.js','/mail-settings.js','/mail.css','/theme.js','/theme.css','/app.js','/monitor.js','/dashboard.js','/reports.js','/settings.js','/backup-settings.js','/client-access.js','/style.css'];
 if(req.method==='GET'&&files.includes(path)){const name=path==='/'?(customer?'customer.html':'index.html'):path.slice(1);res.setHeader('Content-Type',name.endsWith('html')?'text/html; charset=utf-8':name.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(readFileSync(root+'public/'+name));}
 json(res,404,{error:'Não encontrado'});
 }catch(err){json(res,err.status||400,{error:err.status?err.message:'Não foi possível processar a solicitação'});}};

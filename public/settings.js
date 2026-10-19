@@ -97,5 +97,5 @@ export function createSettings({api,notify,onCompany,onRoles,onUsers}){
       download(await response.blob(),`sistema-backup-${new Date().toISOString().slice(0,10)}.sqlite`);notify('Backup baixado. Guarde o arquivo em local seguro.');
     });
   }
-  return {show,showMail(element,me){section='mail';return show(element,me);}};
+  return {show,showPermissions(element,me){section='permissions';return show(element,me);},showMail(element,me){section='mail';return show(element,me);}};
 }

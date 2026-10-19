@@ -15,8 +15,9 @@ async function start(dir,port){
 }
 test('perfis, usuários, revogação de sessões e proteção do administrador',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'sistema-users-'));const app=await start(dir,3201);const call=app.request;
- const password='test-password-12345',newPassword='another-password-12345';
+ const password='Teste123',newPassword='Nova1234';
  try {
+ assert.equal((await call('setup','POST',{name:'Admin',email:'admin@example.test',password:'1234567'})).status,400);
  assert.equal((await call('setup','POST',{name:'Admin',email:'admin@example.test',password})).status,201);
  const login=async email=>{const r=await call('login','POST',{email,password});assert.equal(r.status,200);return r.cookie;};
  const admin=await login('admin@example.test');
@@ -25,7 +26,7 @@ test('perfis, usuários, revogação de sessões e proteção do administrador',
  for(const role of ['technician','viewer'])assert.equal((await call('users','POST',{name:role,email:`${role}@example.test`,password,role},admin)).status,201);
  assert.equal((await call('users','POST',{name:'dup',email:'VIEWER@example.test',password,role:'viewer'},admin)).status,409);
  assert.equal((await call('users','POST',{name:'bad',email:'bad@example.test',password,role:'owner'},admin)).status,400);
- assert.equal((await call('users','POST',{name:'bad',email:'bad@example.test',password:'short',role:'viewer'},admin)).status,400);
+ assert.equal((await call('users','POST',{name:'bad',email:'bad@example.test',password:'1234567',role:'viewer'},admin)).status,400);
  const list=(await call('users','GET',null,admin)).data;
  const viewerId=list.find(u=>u.role==='viewer').id,techId=list.find(u=>u.role==='technician').id,adminId=list.find(u=>u.role==='admin').id;
  assert.ok(list.every(u=>!('password' in u)));

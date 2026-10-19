@@ -11,7 +11,7 @@ export function createClientAccess({db,body,json,config,hash,validEmail,validPas
    const previous=id?db.prepare("SELECT id,name,email,client_id,active,portal_write FROM users WHERE id=? AND account_type='client'").get(id):null;if(id&&!previous)fail('Acesso de cliente não encontrado',404);
    const name=b.name===undefined?previous?.name:typeof b.name==='string'?b.name.trim():'',email=b.email===undefined?previous?.email:typeof b.email==='string'?b.email.trim().toLowerCase():'',clientId=b.clientId===undefined?previous?.client_id:b.clientId,active=b.active===undefined?(previous?.active??1):b.active;
    if(!name||name.length>500||!validEmail(email)||!Number.isSafeInteger(clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(clientId)||![0,1].includes(active))fail('Informe nome, e-mail, empresa vinculada e situação válidos');
-   if((!previous||b.password!==undefined)&&!validPassword(b.password))fail('A senha deve ter de 12 a 256 caracteres');
+   if((!previous||b.password!==undefined)&&!validPassword(b.password))fail('A senha deve ter de 8 a 256 caracteres');
    if(db.prepare('SELECT id FROM users WHERE email=? AND id<>?').get(email,id??0))fail('E-mail já cadastrado',409);
    db.exec('BEGIN IMMEDIATE');let resultId=id;try{
     if(previous){db.prepare("UPDATE users SET name=?,email=?,client_id=?,active=?,role='client_viewer' WHERE id=?").run(name,email,clientId,active,id);if(b.password!==undefined)db.prepare('UPDATE users SET password=? WHERE id=?').run(hash(b.password),id);db.prepare('DELETE FROM sessions WHERE user_id=?').run(id);}

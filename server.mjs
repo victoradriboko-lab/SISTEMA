@@ -37,7 +37,7 @@ if(!columns.includes('account_type'))db.exec("ALTER TABLE users ADD COLUMN accou
 if(!columns.includes('client_id'))db.exec('ALTER TABLE users ADD COLUMN client_id INTEGER');
 const sessionColumns=db.prepare('PRAGMA table_info(sessions)').all().map(c=>c.name);
 if(!sessionColumns.includes('audience'))db.exec("ALTER TABLE sessions ADD COLUMN audience TEXT NOT NULL DEFAULT 'internal'");
-const validPassword = value => typeof value === 'string' && value.length >= 12 && value.length <= 256;
+const validPassword = value => typeof value === 'string' && value.length >= 8 && value.length <= 256;
 const validEmail = value => typeof value === 'string' && value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const publicUsers = () => db.prepare("SELECT id,name,email,role,active FROM users WHERE account_type='internal' ORDER BY name,id").all();
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));};
@@ -69,7 +69,7 @@ if(path==='/api/state'&&req.method==='GET'){return json(res,200,customer?{portal
 if(path==='/api/setup'&&req.method==='POST'){
 if(customer)return json(res,403,{error:'Cadastros são feitos pelo administrador no sistema interno'});
 if(db.prepare('SELECT id FROM users LIMIT 1').get())return json(res,409,{error:'Administrador já cadastrado'});
-const b=await body(req);if(!str(b.name)||!validEmail(b.email)||!validPassword(b.password))return json(res,400,{error:'Informe nome, e-mail e senha de pelo menos 12 caracteres'});
+const b=await body(req);if(!str(b.name)||!validEmail(b.email)||!validPassword(b.password))return json(res,400,{error:'Informe nome, e-mail e senha de pelo menos 8 caracteres'});
 if(db.prepare('SELECT id FROM users LIMIT 1').get())return json(res,409,{error:'Administrador já cadastrado'});
 const created=db.prepare('INSERT INTO users(name,email,password) VALUES(?,?,?)').run(str(b.name),str(b.email).toLowerCase(),hash(b.password));config.audit({id:Number(created.lastInsertRowid),name:str(b.name)},'users.setup','Administrador inicial cadastrado');return json(res,201,{ok:true});}
 if(path==='/api/login'&&req.method==='POST'){const b=await body(req);const attempt=security.throttle(req,b.email);const user=db.prepare('SELECT * FROM users WHERE email=?').get(str(b.email).toLowerCase());if(!user||!user.active||typeof b.password!=='string'||b.password.length>256||!check(b.password,user.password)){config.audit(null,'auth.failed','Tentativa de login recusada');return json(res,401,{error:'Credenciais inválidas'});}if(isClient(user)!==customer)return json(res,403,{error:customer?'Este painel é exclusivo para contas de clientes. Use o sistema interno com sua conta de operador.':'Esta conta pertence ao Painel do Cliente. Acesse '+portalURL(req)});if(!customer&&!security.verify(user.id,b.code))return json(res,401,{error:'Informe o código do autenticador ou um código de recuperação válido'});security.clear(attempt);config.audit(user,'auth.login',customer?'Login no Painel do Cliente':'Login realizado');const token=randomBytes(32).toString('hex');db.prepare('INSERT INTO sessions(token,user_id,expires,audience) VALUES(?,?,?,?)').run(token,user.id,Date.now()+28800000,audience);res.setHeader('Set-Cookie',`${cookieName}=${token}; ${cookieOptions}`);return json(res,200,{ok:true});}
@@ -83,7 +83,7 @@ if(path==='/api/me/password'&&req.method==='POST'){
 const b=await body(req);
 const user=db.prepare('SELECT password FROM users WHERE id=?').get(session.id);
 if(typeof b.currentPassword!=='string'||b.currentPassword.length>256||!check(b.currentPassword,user.password))return json(res,403,{error:'Senha atual incorreta'});
-if(!validPassword(b.password))return json(res,400,{error:'A nova senha deve ter de 12 a 256 caracteres'});
+if(!validPassword(b.password))return json(res,400,{error:'A nova senha deve ter de 8 a 256 caracteres'});
 db.prepare('UPDATE users SET password=? WHERE id=?').run(hash(b.password),session.id);
 db.prepare('DELETE FROM sessions WHERE user_id=?').run(session.id);
 config.audit(session,'users.password','Própria senha alterada');return json(res,200,{ok:true,reauthenticate:true});
@@ -107,7 +107,7 @@ if(session.role!=='admin')return json(res,403,{error:'Somente administradores po
 if(path==='/api/users'&&req.method==='GET')return json(res,200,publicUsers());
 if(path==='/api/users'&&req.method==='POST'){
 const b=await body(req);
-if(!str(b.name)||!validEmail(b.email)||!validPassword(b.password)||!config.roleExists(b.role))return json(res,400,{error:'Informe nome, e-mail, perfil e senha de 12 a 256 caracteres'});
+if(!str(b.name)||!validEmail(b.email)||!validPassword(b.password)||!config.roleExists(b.role))return json(res,400,{error:'Informe nome, e-mail, perfil e senha de 8 a 256 caracteres'});
 const email=b.email.trim().toLowerCase();
 if(db.prepare('SELECT id FROM users WHERE email=?').get(email))return json(res,409,{error:'E-mail já cadastrado'});
 const result=db.prepare('INSERT INTO users(name,email,password,role,active) VALUES(?,?,?,?,1)').run(str(b.name),email,hash(b.password),b.role);
@@ -122,7 +122,7 @@ const email=b.email===undefined?user.email:str(b.email).toLowerCase();
 const role=b.role===undefined?user.role:b.role;
 const active=b.active===undefined?user.active:b.active;
 if(!name||!validEmail(email)||!config.roleExists(role)||![0,1].includes(active))return json(res,400,{error:'Nome, e-mail, perfil ou situação inválidos'});
-if(b.password!==undefined&&!validPassword(b.password))return json(res,400,{error:'A senha deve ter de 12 a 256 caracteres'});
+if(b.password!==undefined&&!validPassword(b.password))return json(res,400,{error:'A senha deve ter de 8 a 256 caracteres'});
 if(b.password!==undefined&&id===session.id)return json(res,400,{error:'Use Minha senha para alterar sua própria senha'});
 if(db.prepare('SELECT id FROM users WHERE email=? AND id<>?').get(email,id))return json(res,409,{error:'E-mail já cadastrado'});
 if(user.role==='admin'&&user.active===1&&(role!=='admin'||active===0)&&db.prepare("SELECT COUNT(*) AS total FROM users WHERE role='admin' AND active=1").get().total<=1)return json(res,409,{error:'Mantenha pelo menos um administrador ativo'});

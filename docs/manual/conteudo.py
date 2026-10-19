@@ -12,7 +12,7 @@ PAGES = [
 ('Entrar e navegar', '02 / ACESSO', [
 ('image','00-login.png','Tela de entrada • identidade visual da plataforma.'),
 ('steps',['Abra a URL da plataforma no navegador e informe seu e-mail e senha. Clique em Entrar. A conta interna abre o Dashboard. Clientes utilizam o endereço exclusivo do Painel do Cliente, na porta 3001 por padrão; operadores continuam na porta interna configurada.','Use o menu à esquerda, posicionado no alto: expanda Atendimento, Clientes, Infraestrutura, Gestão ou Administração e escolha o módulo autorizado. O Dashboard permanece direto no menu. Em telas menores, a organização se adapta ao espaço.','No topo, use Minha senha para informar a senha atual, a nova senha e a confirmação. Para encerrar o uso, clique em Sair.']),
-('note','Senha e sessão','As senhas aceitam de 12 a 256 caracteres. Trocar a senha encerra suas sessões e exige novo login. Se esquecer a senha, solicite redefinição ao administrador; não há recuperação automática por e-mail.')]),
+('note','Senha e sessão','As senhas aceitam de 8 a 256 caracteres. Trocar a senha encerra suas sessões e exige novo login. Se esquecer a senha, solicite redefinição ao administrador; não há recuperação automática por e-mail.')]),
 ('Entender o Dashboard', '03 / VISÃO DA OPERAÇÃO', [
 ('image','01-dashboard.png','Dashboard interno • indicadores conforme as permissões do usuário.'),
 ('p','Consulte os totais de clientes, equipamentos, agentes online, equipamentos sem comunicação e chamados por situação. Os alertas destacam recursos em uso elevado e chamados parados conforme as regras de atendimento.'),

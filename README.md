@@ -16,7 +16,7 @@ npm test
 npm start
 ```
 
-O servidor escuta em 0.0.0.0:3000 por padrão, permitindo acesso local e pela rede. A primeira abertura solicita cadastro do administrador (senha mínima de 12 caracteres). Faça esse cadastro antes de disponibilizar a aplicação a outras pessoas. Não existe usuário padrão. PORT e HOST permitem configurar a escuta. O Painel do Cliente inicia separadamente em 0.0.0.0:3001 e herda HOST, salvo quando CLIENT_HOST é definido. Esse padrão é o mesmo em instalações locais e cloud. Para restringir o acesso ao próprio servidor, defina HOST=127.0.0.1. Para publicação externa, coloque atrás de proxy HTTPS e defina COOKIE_SECURE=1. Dados persistem em data/sistema.db; DATA_DIR permite outro diretório. Faça backups consistentes com SQLite; não copie apenas o arquivo principal durante gravações em modo WAL.
+O servidor escuta em 0.0.0.0:3000 por padrão, permitindo acesso local e pela rede. A primeira abertura solicita cadastro do administrador (senha mínima de 8 caracteres). Faça esse cadastro antes de disponibilizar a aplicação a outras pessoas. Não existe usuário padrão. PORT e HOST permitem configurar a escuta. O Painel do Cliente inicia separadamente em 0.0.0.0:3001 e herda HOST, salvo quando CLIENT_HOST é definido. Esse padrão é o mesmo em instalações locais e cloud. Para restringir o acesso ao próprio servidor, defina HOST=127.0.0.1. Para publicação externa, coloque atrás de proxy HTTPS e defina COOKIE_SECURE=1. Dados persistem em data/sistema.db; DATA_DIR permite outro diretório. Faça backups consistentes com SQLite; não copie apenas o arquivo principal durante gravações em modo WAL.
 
 ## Implementado
 
@@ -71,7 +71,7 @@ Remove-NetFirewallRule -Name 'Servitec-Clientes-LAN-3001'
 
 ## Usuários, senhas e permissões padrão
 
-Entre como administrador e abra **Usuários e permissões**. Use **Novo usuário** para definir nome, e-mail de login, senha inicial (12 a 256 caracteres) e perfil. Em **Editar**, altere cadastro, perfil, situação ou defina nova senha para outro usuário. A senha existente nunca é exibida. Deixar a nova senha vazia mantém a anterior. Não há exclusão definitiva: desative a conta para bloquear acesso.
+Entre como administrador e abra **Usuários e permissões**. Use **Novo usuário** para definir nome, e-mail de login, senha inicial (8 a 256 caracteres) e perfil. Em **Editar**, altere cadastro, perfil, situação ou defina nova senha para outro usuário. A senha existente nunca é exibida. Deixar a nova senha vazia mantém a anterior. Não há exclusão definitiva: desative a conta para bloquear acesso.
 
 | Permissão | Administrador | Técnico | Consulta |
 | --- | --- | --- | --- |

@@ -23,3 +23,17 @@ test('dashboard respeita permissões e escapa o conteúdo dos cadastros',()=>{
  const html=renderDashboard({assets:[{...assets[0],name:'<img src=x onerror=alert(1)>'}],tickets:[],clients,user:{name:'<script>teste</script>',permissions:['assets.read','monitor.read']},now});assert.ok(!html.includes('<script>'));assert.ok(!html.includes('<img src=x'));assert.ok(html.includes('&lt;script&gt;'));
  const inventoryOnly=dashboardSummary({assets,tickets,clients,permissions:['assets.read'],now});assert.equal(inventoryOnly.critical.length,0);assert.equal(inventoryOnly.connected.length,0);assert.equal(inventoryOnly.byClient[0].online,null);
 });
+test('painel filtra por cliente, prioridade e operador e calcula SLA com dados reais',()=>{
+ const requests=[
+  {id:1,client_id:1,operator_id:7,priority:'Alta',status:'Aberto',sla:{state:'overdue',response_due:new Date(now-1000).toISOString()}},
+  {id:2,client_id:2,operator_id:8,priority:'Baixa',status:'Em atendimento',sla:{state:'running',response_due:new Date(now+1800000).toISOString()}},
+  {id:3,client_id:1,operator_id:7,priority:'Alta',status:'Resolvido',sla:null}
+ ];
+ const user={id:7,name:'Admin',permissions:['tickets.read','assets.read','monitor.read']};
+ const value=(html,label)=>Number(html.match(new RegExp('ops-tile-label">'+label+'<[^]*?<strong>(\\d+)</strong>'))[1]);
+ const all=renderDashboard({tickets:requests,assets,clients,user,now});
+ assert.equal(value(all,'Abertos'),2);assert.equal(value(all,'Meus'),1);assert.equal(value(all,'Estourados'),1);assert.equal(value(all,'Prestes a estourar'),1);assert.equal(value(all,'Dispositivos'),4);
+ const filtered=renderDashboard({tickets:requests,assets,clients,user,now,filters:{clientId:'1',priority:'Alta',operatorId:'7'}});
+ assert.equal(value(filtered,'Abertos'),1);assert.equal(value(filtered,'Resolvidos'),1);assert.equal(value(filtered,'Dispositivos'),2);assert.equal(value(filtered,'Prestes a estourar'),0);
+ const empty=renderDashboard({tickets:requests,assets,clients,user,now,filters:{clientId:'1',priority:'Baixa'}});assert.equal(value(empty,'Abertos'),0);assert.equal(value(empty,'Dispositivos'),2);
+});

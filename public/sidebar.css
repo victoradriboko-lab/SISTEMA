@@ -45,3 +45,5 @@
 @media(prefers-reduced-motion:reduce){#sidebar-nav .nav-chevron{transition:none}}
 #sidebar-nav [data-nav-group][aria-expanded=true]>.nav-title{transform:none}
 #sidebar-nav [data-nav-group][aria-expanded=true]>.nav-chevron{transform:rotate(90deg)}
+
+:root[data-auth=guest] :is(#sidebar-nav,.sidebar-search,#module-search-empty){display:none!important}

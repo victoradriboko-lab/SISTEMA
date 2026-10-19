@@ -382,3 +382,7 @@ Não execute `git clean -fdx`, não apague a pasta de dados e não copie um banc
 ### Login com e-mail e senha
 
 As entradas interna e do Painel do Cliente utilizam somente e-mail e senha, inclusive para contas com autenticador configurado anteriormente. Nenhum usuário, senha ou configuração de MFA é apagado pela atualização. O segundo fator permanece nas operações sensíveis que o exigem, como a consulta ao cofre.
+
+### Página inicial operacional
+
+Após o login, o dashboard mostra cartões compactos e coloridos de chamados, SLA, inventário e recursos. Os filtros de cliente, prioridade e operador usam os registros existentes e respeitam as permissões. A previsão de SLA considera a próxima meta com vencimento em até uma hora. Somente indicadores disponíveis no sistema são exibidos; nenhuma informação é gravada no banco por esses filtros. Antes do login, menu e busca ficam ocultos, e o topo indica Entrar.

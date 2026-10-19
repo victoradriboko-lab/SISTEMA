@@ -3,7 +3,8 @@ using System.Net;
 
 namespace Servitec {
     public static class AgentPolicy {
-        public const string Version = "1.2.0";
+        public const string Version = "1.2.1";
+        public static bool ValidAgentToken(string value) { return value != null && System.Text.RegularExpressions.Regex.IsMatch(value, @"^(?:[A-Za-z0-9]{10}|[a-fA-F0-9]{64})\z"); }
         public static bool PrivateHttp(Uri uri) {
             IPAddress ip;
             if (!IPAddress.TryParse(uri.Host, out ip)) return false;

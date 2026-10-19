@@ -41,8 +41,7 @@ try {
     $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try { $token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
     $token = $token.Trim()
-    if ($token -notmatch '^[a-fA-F0-9]{64}$') { throw 'O token deve ser o token de 64 caracteres gerado no cadastro da empresa cliente.' }
-    $token = $token.ToLowerInvariant()
+    if ($token -cnotmatch '^[A-Za-z0-9]{10}$') { throw 'O token deve ter 10 letras e numeros. Copie o token atual na ficha da empresa cliente.' }
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Write-Host 'Token informado. Verificando a conexao com a API do servidor...'
     $state = Invoke-ServitecAgentRequest -Server $server -Path '/api/state'

@@ -1,8 +1,10 @@
+import {newCompanyToken,compactCompanyTokens} from './company-tokens.mjs';
 import {randomBytes} from 'node:crypto';
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 export function createClients({db,body,json,config,check}){
  db.exec(`CREATE TABLE IF NOT EXISTS clients(id INTEGER PRIMARY KEY,name TEXT NOT NULL,token TEXT UNIQUE NOT NULL);
  CREATE TABLE IF NOT EXISTS client_machines(client_id INTEGER NOT NULL,machine_id TEXT NOT NULL,asset_id INTEGER NOT NULL,PRIMARY KEY(client_id,machine_id));`);
+ const replacedTokens=compactCompanyTokens(db);if(replacedTokens)config.audit(null,'clients.tokens.compact',`${replacedTokens} token(s) de empresa substituído(s) por solicitação do proprietário`);
  const columns=db.prepare('PRAGMA table_info(assets)').all().map(c=>c.name);
  if(!columns.includes('client_id'))db.exec('ALTER TABLE assets ADD COLUMN client_id INTEGER');
  const clean=v=>typeof v==='string'?v.trim().slice(0,500):'';
@@ -27,14 +29,14 @@ export function createClients({db,body,json,config,check}){
   if(path==='/api/clients'&&req.method==='POST'){
    const b=await body(req),name=clean(b.name);if(!name)fail('Nome da empresa obrigatório');
    if(db.prepare('SELECT id FROM clients WHERE lower(trim(name))=lower(?)').get(name))fail('Empresa já cadastrada',409);
-   const token=randomBytes(32).toString('hex'),row=db.prepare('INSERT INTO clients(name,token) VALUES(?,?)').run(name,token);
+   const token=newCompanyToken(db),row=db.prepare('INSERT INTO clients(name,token) VALUES(?,?)').run(name,token);
    config.audit(user,'clients.create',`Empresa #${row.lastInsertRowid} cadastrada`);json(res,201,{id:Number(row.lastInsertRowid),token});return true;
   }
   if(/^\/api\/clients\/\d+\/token$/.test(path)&&req.method==='POST'){
    const id=Number(path.split('/')[3]),b=await body(req),stored=db.prepare('SELECT password FROM users WHERE id=?').get(user.id);
    if(typeof b.password!=='string'||b.password.length>256||!check(b.password,stored.password))fail('Senha atual incorreta',403);
    if(!db.prepare('SELECT id FROM clients WHERE id=?').get(id))fail('Empresa não encontrada',404);
-   const token=randomBytes(32).toString('hex');db.prepare('UPDATE clients SET token=? WHERE id=?').run(token,id);config.audit(user,'clients.token',`Token da empresa #${id} renovado`);json(res,200,{token});return true;
+   const token=newCompanyToken(db);db.prepare('UPDATE clients SET token=? WHERE id=?').run(token,id);config.audit(user,'clients.token',`Token da empresa #${id} renovado`);json(res,200,{token});return true;
   }
   if(path==='/api/assets'&&req.method==='GET'){
    const url=new URL(req.url,'http://localhost'),filter=url.searchParams.get('clientId');

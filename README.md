@@ -440,3 +440,7 @@ A ficha reúne as 13 seções por empresa, com cadastro de unidades, contatos, e
 ### Ficha detalhada de equipamentos e agente 1.2
 
 O inventário abre uma ficha com 18 seções, coleta Windows ampliada, histórico de alterações, documentos/fotos, tickets e vínculos ao cofre. O botão **Equipamento de teste** cria uma demonstração somente quando acionado por administrador. Atualize o servidor e reinstale o agente para receber novos campos. O instalador já usa `https://vsuarez.ddns.net:3000`; há alternativa HTTP explícita. Veja [campos, limitações e instruções](docs/FICHA-CLIENTE-INVENTARIO.md).
+
+### Substituição autorizada dos tokens longos de empresa
+
+Por solicitação explícita do proprietário, que informou não haver agentes ativos, esta atualização troca os tokens de empresa com mais de 10 caracteres por valores únicos de 10 letras e números na primeira inicialização do servidor. Tokens antigos ficam inválidos. Clientes, usuários, equipamentos, senhas e históricos permanecem intactos. A migração é transacional e idempotente: os tokens curtos não mudam nos reinícios seguintes. Novos cadastros, importações e renovações usam o mesmo formato curto. Use o instalador/agente 1.2.1 e copie o token exatamente, respeitando maiúsculas e minúsculas. A troca não encurta senhas, hashes, chaves internas do aplicativo ou tokens individuais antigos dos equipamentos.

@@ -1,4 +1,4 @@
-import {randomBytes} from 'node:crypto';
+import {newCompanyToken} from './company-tokens.mjs';
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const norm=value=>String(value??'').trim().normalize('NFKC').toLocaleLowerCase('pt-BR');
 const headers={codigo:'code',nome:'name',nomefantasia:'name',cnpj:'cnpj',telefone:'phone',email:'email',contato:'contact',endereco:'address',status:'status',expediente:'calendar',contrato:'contract',limite:'limit'};
@@ -28,7 +28,7 @@ export function createClientManagement({db,json,body,config}){
   if(['/api/client-management/import/preview','/api/client-management/import'].includes(path)&&req.method==='POST'){
    requirePermission('assets.write');requirePermission('contracts.manage');const b=await body(req),rows=preview(b.csv);if(path.endsWith('/preview')){json(res,200,{rows,creates:rows.filter(r=>r.action==='create').length,skips:rows.filter(r=>r.action==='skip').length,errors:rows.filter(r=>r.action==='error').length});return true;}
    if(b.confirm!==true)fail('Confirme a importação após revisar a prévia');if(rows.some(r=>r.action==='error'))fail('Corrija as linhas inválidas antes de importar');
-   const created=[];db.exec('BEGIN IMMEDIATE');try{for(const row of rows.filter(r=>r.action==='create')){const result=db.prepare('INSERT INTO clients(name,token) VALUES(?,?)').run(row.name,randomBytes(32).toString('hex')),id=Number(result.lastInsertRowid);db.prepare('INSERT INTO service_companies(client_id,profile) VALUES(?,?)').run(id,JSON.stringify(row.profile));config.audit(user,'clients.import',`Empresa #${id}: ${row.name}`);created.push({id,name:row.name});}db.exec('COMMIT');}catch(error){db.exec('ROLLBACK');throw error;}json(res,200,{created,skipped:rows.filter(r=>r.action==='skip').length});return true;
+   const created=[];db.exec('BEGIN IMMEDIATE');try{for(const row of rows.filter(r=>r.action==='create')){const result=db.prepare('INSERT INTO clients(name,token) VALUES(?,?)').run(row.name,newCompanyToken(db)),id=Number(result.lastInsertRowid);db.prepare('INSERT INTO service_companies(client_id,profile) VALUES(?,?)').run(id,JSON.stringify(row.profile));config.audit(user,'clients.import',`Empresa #${id}: ${row.name}`);created.push({id,name:row.name});}db.exec('COMMIT');}catch(error){db.exec('ROLLBACK');throw error;}json(res,200,{created,skipped:rows.filter(r=>r.action==='skip').length});return true;
   }
   const m=path.match(/^\/api\/client-management\/clients\/(\d+)$/);if(!m||req.method!=='PATCH')fail('Rota não encontrada',404);const id=Number(m[1]);if(!db.prepare('SELECT id FROM clients WHERE id=?').get(id))fail('Cliente não encontrado',404);const b=await body(req);
   if(b.blocked===undefined&&b.ticketLimit===undefined||Object.keys(b).some(k=>!['blocked','ticketLimit'].includes(k)))fail('Informe bloqueio ou limite');

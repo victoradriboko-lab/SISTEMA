@@ -15,7 +15,7 @@ using System.Threading;
 using System.Web.Script.Serialization;
 using Microsoft.Win32;
 
-[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyVersion("1.2.1.0")]
 namespace Servitec {
     internal sealed class AgentHttpException : Exception { public readonly int Status; public AgentHttpException(int status) { Status = status; } }
     public sealed class AgentService : ServiceBase {
@@ -63,7 +63,7 @@ namespace Servitec {
             Guid parsed; if (!Guid.TryParse(machineId, out parsed)) throw new ArgumentException("machineId invalido");
             interval = Math.Max(15, Math.Min(300, Convert.ToInt32(config["intervalSeconds"])));
             token = Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(Convert.ToString(config["protectedToken"])), null, DataProtectionScope.LocalMachine));
-            if (token.Length != 64 || token.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("Token invalido");
+            if (!AgentPolicy.ValidAgentToken(token)) throw new ArgumentException("Token invalido");
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseProxy = true });
             client.Timeout = TimeSpan.FromSeconds(45);

@@ -1,4 +1,4 @@
-# Agente Windows e Windows Server — 1.2.0
+# Agente Windows e Windows Server — 1.2.1
 
 Agente de inventário e telemetria para Windows 10/11 ou Windows Server 2016+, com .NET Framework 4.6.2+. Não executa comandos remotos nem coleta senhas ou arquivos pessoais. O aplicativo de abrir chamados usa autorização da empresa, sem login do usuário.
 
@@ -33,3 +33,7 @@ Use os projetos .NET Framework em `agents/windows`, `client` e `installer`. O em
 `tests/PolicyTests.cs` verifica as regras de URL e o caminho explícito de HTTP. Consulte [a ficha detalhada e a demonstração](../../docs/FICHA-CLIENTE-INVENTARIO.md).
 
 Os dois instaladores usam agora a porta 3000, mas mantêm seus protocolos distintos. O servidor Node padrão atende HTTP nessa porta: nesse caso use o instalador HTTP. Usar HTTPS na mesma porta exige terminação TLS configurada; a liberação da porta no firewall não adiciona HTTPS.
+
+## Tokens de empresa com 10 caracteres
+
+Novos cadastros, importações e renovações geram tokens únicos de 10 letras e números, com diferenciação entre maiúsculas e minúsculas. Copie o valor exatamente como aparece na ficha. O instalador e o agente 1.2.1 aceitam esse formato. As chaves internas do aplicativo e tokens individuais legados de equipamentos não foram encurtados.

@@ -1,3 +1,4 @@
+import {validCompanyToken} from './company-tokens.mjs';
 import {createHash,randomBytes} from 'node:crypto';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
@@ -10,7 +11,7 @@ export function createDeviceSupport({db,body,json,config,desk,canOpenTicket=()=>
  async function publicRoute(req,res,path){
   if(!['/api/agent/support/enroll','/api/agent/support/tickets'].includes(path))return false;
   if(req.method!=='POST')fail('Método não permitido',405);
-  const token=bearer(req);if(!/^[0-9a-f]{64}$/.test(token))fail('Autorização do equipamento inválida',401);
+  const token=bearer(req);if(path.endsWith('/enroll')?!validCompanyToken(token):!/^[0-9a-f]{64}$/.test(token))fail('Autorização do equipamento inválida',401);
   if(path.endsWith('/enroll')){
    const b=await body(req),client=db.prepare('SELECT id,name,token FROM clients WHERE token=?').get(token);if(!client)fail('Use o token vigente da empresa para autorizar o aplicativo',401);
    if(!uuid(b.machineId)||!clean(b.name,120)||typeof b.name!=='string'||b.name.length>120)fail('Identidade do equipamento inválida');

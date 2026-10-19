@@ -3,6 +3,8 @@ using Servitec;
 class PolicyTests {
     static void Main() {
         int count = 0;
+        foreach (string token in new [] { "aB3dE5gH7j", new string('a',64) }) { if (!AgentPolicy.ValidAgentToken(token)) throw new Exception("Token valido rejeitado"); count++; }
+        foreach (string token in new [] { "123456789", "12345678901", "12345_7890", "ABCDEFGHIJ\n" }) { if (AgentPolicy.ValidAgentToken(token)) throw new Exception("Token invalido aceito"); count++; }
         foreach (string url in new [] { "https://servidor.example", "https://servidor.example:443/", "http://127.0.0.1:3000", "http://192.168.1.10:3000", "http://10.0.0.2:3000", "http://172.16.2.3:3000", "http://172.31.255.254:3000" }) { AgentPolicy.ServerUri(url,true); count++; }
         foreach (string url in new [] { "http://servidor.example", "http://8.8.8.8", "http://172.32.0.1", "http://192.169.0.1", "https://user:pass@servidor.example", "https://servidor.example/other", "https://servidor.example/?token=test", "https://servidor.example/#fragment", "file:///tmp/data", "not a url" }) {
             bool rejected = false; try { AgentPolicy.ServerUri(url,true); } catch (ArgumentException) { rejected = true; }

@@ -62,3 +62,7 @@ Os instaladores vêm configurados para `https://vsuarez.ddns.net:3000` (padrão)
 [Prévia da ficha com equipamento demonstrativo e dados simulados](imagens/equipamento-demo.png).
 
 Os dois instaladores usam agora a porta 3000, mas mantêm seus protocolos distintos. O servidor Node padrão atende HTTP nessa porta: nesse caso use o instalador HTTP. Usar HTTPS na mesma porta exige terminação TLS configurada; a liberação da porta no firewall não adiciona HTTPS.
+
+### Substituição autorizada dos tokens longos de empresa
+
+Por solicitação explícita do proprietário, que informou não haver agentes ativos, esta atualização troca os tokens de empresa com mais de 10 caracteres por valores únicos de 10 letras e números na primeira inicialização do servidor. Tokens antigos ficam inválidos. Clientes, usuários, equipamentos, senhas e históricos permanecem intactos. A migração é transacional e idempotente: os tokens curtos não mudam nos reinícios seguintes. Novos cadastros, importações e renovações usam o mesmo formato curto. Use o instalador/agente 1.2.1 e copie o token exatamente, respeitando maiúsculas e minúsculas. A troca não encurta senhas, hashes, chaves internas do aplicativo ou tokens individuais antigos dos equipamentos.

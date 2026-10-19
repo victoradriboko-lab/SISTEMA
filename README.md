@@ -439,4 +439,4 @@ A ficha reúne as 13 seções por empresa, com cadastro de unidades, contatos, e
 
 ### Ficha detalhada de equipamentos e agente 1.2
 
-O inventário abre uma ficha com 18 seções, coleta Windows ampliada, histórico de alterações, documentos/fotos, tickets e vínculos ao cofre. O botão **Equipamento de teste** cria uma demonstração somente quando acionado por administrador. Atualize o servidor e reinstale o agente para receber novos campos. O instalador já usa `https://vsuarez.ddns.net`; há alternativa HTTP explícita. Veja [campos, limitações e instruções](docs/FICHA-CLIENTE-INVENTARIO.md).
+O inventário abre uma ficha com 18 seções, coleta Windows ampliada, histórico de alterações, documentos/fotos, tickets e vínculos ao cofre. O botão **Equipamento de teste** cria uma demonstração somente quando acionado por administrador. Atualize o servidor e reinstale o agente para receber novos campos. O instalador já usa `https://vsuarez.ddns.net:3003`; há alternativa HTTP explícita. Veja [campos, limitações e instruções](docs/FICHA-CLIENTE-INVENTARIO.md).

@@ -18,10 +18,10 @@ namespace Servitec.Setup {
             Console.WriteLine("SERVITEC | Agente para Windows e Windows Server");
             #if HTTP_DEFAULT
             const bool useHttp = true;
-            Console.WriteLine("Servidor: http://vsuarez.ddns.net | Informe somente o token da empresa.");
+            Console.WriteLine("Servidor: http://vsuarez.ddns.net:3002 | Informe somente o token da empresa.");
 #else
             const bool useHttp = false;
-            Console.WriteLine("Servidor: https://vsuarez.ddns.net | Informe somente o token da empresa.");
+            Console.WriteLine("Servidor: https://vsuarez.ddns.net:3003 | Informe somente o token da empresa.");
 #endif
             try {
                 using (WindowsIdentity identity = WindowsIdentity.GetCurrent()) {

@@ -4,7 +4,7 @@ import {join} from 'node:path';
 import {MAX_MAIL_BYTES,normalizeEmail,validSender,parseIncomingMail,openGmail} from './mail-receiver.mjs';
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const defaults={provider:'gmail',address:'',enabled:false,intervalSeconds:60};
-export function createMail({db,body,json,config,check,dataDir,receiver=openGmail,clock=()=>Date.now(),startScheduler=true,desk=null,smtpFactory=async options=>(await import('nodemailer')).default.createTransport(options)}){
+export function createMail({db,body,json,config,check,dataDir,receiver=openGmail,clock=()=>Date.now(),startScheduler=true,desk=null,canOpenTicket=()=>{},smtpFactory=async options=>(await import('nodemailer')).default.createTransport(options)}){
  db.exec(`CREATE TABLE IF NOT EXISTS email_messages(id INTEGER PRIMARY KEY,fingerprint TEXT NOT NULL UNIQUE,provider_key TEXT UNIQUE,mailbox TEXT NOT NULL DEFAULT '',sender TEXT NOT NULL,sender_name TEXT NOT NULL DEFAULT '',subject TEXT NOT NULL,text TEXT NOT NULL,message_id TEXT NOT NULL DEFAULT '',mail_date TEXT,attachments TEXT NOT NULL DEFAULT '[]',risk TEXT NOT NULL DEFAULT '',status TEXT NOT NULL,reason TEXT NOT NULL DEFAULT '',ticket_id INTEGER,client_id INTEGER,reviewed_by INTEGER,reviewed_at TEXT,received_at TEXT NOT NULL);
  CREATE INDEX IF NOT EXISTS email_messages_queue ON email_messages(status,id);
  CREATE INDEX IF NOT EXISTS email_messages_sender ON email_messages(sender,status);
@@ -36,6 +36,7 @@ export function createMail({db,body,json,config,check,dataDir,receiver=openGmail
   validateClient(clientId);
   const refs=JSON.parse(row.reply_refs||'[]');let linked;for(const ref of refs){linked=db.prepare('SELECT t.id FROM tickets t WHERE t.client_id=? AND (EXISTS(SELECT 1 FROM email_messages m WHERE m.ticket_id=t.id AND m.message_id=?) OR EXISTS(SELECT 1 FROM email_outbox o WHERE o.ticket_id=t.id AND o.message_id=?))').get(clientId,ref,ref);if(linked)break;}
   if(linked){db.prepare("UPDATE email_messages SET status='ticket',ticket_id=?,client_id=?,reviewed_by=?,reviewed_at=?,reason='Resposta vinculada por referência' WHERE id=?").run(linked.id,clientId,user?.id??null,iso(),row.id);desk?.event(linked.id,{name:row.sender},'message',row.text,true);return linked.id;}
+  if(!user)canOpenTicket(clientId);
   const metadata=`Recebido por e-mail\nRemetente: ${row.sender}\nRecebido em: ${row.received_at}\n\n`,attachments=JSON.parse(row.attachments),suffix=attachments.length?'\n\nAnexos na caixa original (não importados): '+attachments.map(a=>a.name).join(', '):'',remaining=5000-metadata.length-suffix.slice(0,1200).length;
   const truncated=row.text.length>remaining,description=metadata+row.text.slice(0,Math.max(0,remaining-120))+(truncated?'\n[Texto resumido. Conteúdo completo na Central de e-mails.]':'')+suffix.slice(0,1200);
   const ticketId=Number(db.prepare("INSERT INTO tickets(title,description,priority,status,status_since,client_id,operator_id,service_type) VALUES(?,?,'Média','Aberto',CURRENT_TIMESTAMP,?,NULL,NULL)").run(row.subject,description,clientId).lastInsertRowid);
@@ -51,7 +52,7 @@ export function createMail({db,body,json,config,check,dataDir,receiver=openGmail
    const id=Number(db.prepare('INSERT INTO email_messages(fingerprint,provider_key,mailbox,sender,sender_name,subject,text,message_id,mail_date,attachments,risk,status,reason,received_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(parsed.fingerprint,providerKey,mailbox,parsed.sender,parsed.senderName,parsed.subject,parsed.text,parsed.messageId,parsed.mailDate,JSON.stringify(parsed.attachments),parsed.risk,status,reason,iso()).lastInsertRowid);
    db.prepare('UPDATE email_messages SET reply_refs=? WHERE id=?').run(JSON.stringify(parsed.references),id);
    let ticketId=null;
-   if(status==='pending'&&!parsed.risk&&sender?.status==='approved'&&db.prepare('SELECT id FROM clients WHERE id=?').get(sender.client_id)){ticketId=convert(db.prepare('SELECT * FROM email_messages WHERE id=?').get(id),sender.client_id);}
+   if(status==='pending'&&!parsed.risk&&sender?.status==='approved'&&db.prepare('SELECT id FROM clients WHERE id=?').get(sender.client_id)){try{ticketId=convert(db.prepare('SELECT * FROM email_messages WHERE id=?').get(id),sender.client_id);}catch(error){if(![403,409].includes(error.status))throw error;db.prepare('UPDATE email_messages SET reason=? WHERE id=?').run(error.message+' Aguardando revisão da equipe.',id);}}
    return {id,status:ticketId?'ticket':status,ticket_id:ticketId,duplicate:false};
   });
  }

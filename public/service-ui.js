@@ -1,3 +1,4 @@
+import {renderClientList,bindClientList,bindClientActions} from './client-list.js';
 import {organizeCompanyForm} from './workspace-tabs.js';
 import {billingForm,bindBilling} from './contract-billing.js';
 import {showSecurity} from './security-ui.js';
@@ -9,7 +10,7 @@ export async function showService(root,{api,notify,user,section='companies',getA
  async function save(form,path,method,transform=x=>x){form.onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{await api(path,method,transform(Object.fromEntries(new FormData(form))));if(form.id==='company-form'&&reopenCompany)await reopenCompany();else await again();notify('Dados salvos.','success');}catch(error){notify(error.message);}finally{e.submitter.disabled=false;}};}
  if(section==='security'){await showSecurity(root,{api,notify,back:again});return;}
  if(section==='companies'){
-  const rows=await api('desk/companies');root.innerHTML=`<div class="panel"><h2>Empresas e contratos</h2><p>Ficha central com contatos, unidades, documentação, responsável técnico e metas de atendimento. Cadastre a empresa aqui e abra sua ficha para preencher os dados e o contrato. Para criar o login do cliente, use Clientes → Acessos de clientes.</p>${has('assets.write')?'<button type="button" id="company-create" class="primary">+ Novo cliente</button><div id="company-create-area"></div>':''}${rows.map(c=>`<button data-company="${c.id}">${esc(c.name)}</button>`).join('')||'<p>Nenhuma empresa cadastrada.</p>'}</div>`;
+  const rows=await api('desk/companies');root.innerHTML=renderClientList(rows,{canCreate:has('assets.write'),canImport:has('assets.write')&&has('contracts.manage'),canBlock:has('users.manage'),canLimit:has('contracts.manage')});bindClientList(root,rows);bindClientActions(root,rows,{api,notify,again,has});
   root.querySelector('#company-create')?.addEventListener('click',()=>{
    const area=root.querySelector('#company-create-area');
    area.innerHTML='<form id="company-create-form"><label for="company-create-name">Nome da empresa cliente</label><input id="company-create-name" name="name" required maxlength="500" autocomplete="organization"><button type="submit" class="primary">Cadastrar cliente</button> <button type="button" id="company-create-cancel">Cancelar</button></form>';

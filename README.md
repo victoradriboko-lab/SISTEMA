@@ -420,3 +420,15 @@ O menu **Cadastros** reúne as opções abaixo, conforme as permissões da conta
 Os novos cadastros têm busca, edição e ativação/desativação. A desativação preserva o registro; não exclui usuários, clientes ou arquivos. Feriados e expedientes são cadastros de referência: não modificam automaticamente os contratos ou os prazos de SLA existentes. Os horários efetivos dos contratos continuam configurados na ficha da empresa.
 
 Equipes exigem `users.manage`. Setores são editados com `tickets.write`; feriados e expedientes com `contracts.manage`; documentos com `company.manage`. A leitura dos quatro últimos exige `tickets.read`. O portal do cliente não acessa as novas rotas internas. Dados novos ficam no SQLite existente, em tabelas adicionais, e entram nos backups habituais.
+
+### Clientes: tabela, importação, acesso e tokens
+
+Em **Cadastros → Clientes** ou **Clientes → Empresas e contratos**, a tabela reúne código, nome fantasia, status de acesso, contato/telefone, total de tickets e abertos, equipamentos, expediente, SLA e limite de chamados abertos. Use busca sem acentos, filtros, ordenação e paginação. Abra o nome ou **Abrir** para acessar a ficha existente.
+
+- **Exportar clientes:** baixa CSV UTF-8 com dados cadastrais e resumos, sem exportar tokens de autenticação. Fórmulas de planilha são neutralizadas.
+- **Importar clientes:** baixe o modelo, selecione CSV UTF-8 de até 512 KB/1.000 linhas, gere a prévia e confirme. Nome é obrigatório; CNPJ, telefone, e-mail, contato e endereço são opcionais. Registros já existentes por código, nome ou CNPJ são ignorados e preservados. Se houver erro de validação, nenhum cliente novo será criado. Status, expediente, contrato e limite do CSV exportado não são aplicados automaticamente na importação. Exige `assets.write` e `contracts.manage`.
+- **Acesso / limite:** bloqueia ou desbloqueia o portal e as novas solicitações pelo cliente, sem desativar usuários, apagar chamados ou interromper o monitoramento dos agentes. Bloquear encerra as sessões de clientes da empresa; após desbloquear, eles entram novamente. Gerenciar o bloqueio exige `users.manage`.
+- **Limite:** número máximo de chamados não resolvidos abertos pelo cliente. Vazio significa ilimitado; zero impede novas solicitações. O limite é aplicado no portal e no aplicativo de abertura de chamados. E-mails automáticos que excederem o limite ou vierem de empresa bloqueada permanecem na fila para revisão da equipe. Operadores podem continuar registrando atendimentos internos. Exige `contracts.manage`.
+- **Gerar / renovar token:** selecione um único cliente ou use o botão **Token** da linha e confirme sua senha atual. A renovação invalida o token anterior; atualize os agentes depois. O token novo é exibido apenas no resultado da ação e nunca na tabela ou no CSV. Nenhum token é renovado pela atualização ou pela importação de um cliente já existente.
+
+As preferências novas ficam em tabela adicional, com acesso ativo e limite ilimitado quando não houver configuração. A instalação da atualização não bloqueia clientes, não muda limites e não altera tokens existentes.

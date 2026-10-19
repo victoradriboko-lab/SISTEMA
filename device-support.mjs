@@ -2,7 +2,7 @@ import {createHash,randomBytes} from 'node:crypto';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const clean=(value,max)=>typeof value==='string'?value.trim().slice(0,max):'';
-export function createDeviceSupport({db,body,json,config,desk,clock=()=>Date.now()}){
+export function createDeviceSupport({db,body,json,config,desk,canOpenTicket=()=>{},clock=()=>Date.now()}){
  db.exec(`CREATE TABLE IF NOT EXISTS support_devices(id INTEGER PRIMARY KEY,client_id INTEGER NOT NULL,machine_id TEXT NOT NULL,name TEXT NOT NULL,key_hash TEXT NOT NULL UNIQUE,company_key_hash TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,created INTEGER NOT NULL,UNIQUE(client_id,machine_id));
  CREATE TABLE IF NOT EXISTS support_requests(device_id INTEGER NOT NULL,request_id TEXT NOT NULL,ticket_id INTEGER NOT NULL,payload_hash TEXT NOT NULL,created INTEGER NOT NULL,UNIQUE(device_id,request_id));`);
  const bearer=req=>(req.headers.authorization||'').replace(/^Bearer /,'');
@@ -25,6 +25,7 @@ export function createDeviceSupport({db,body,json,config,desk,clock=()=>Date.now
    const old=db.prepare('SELECT * FROM support_requests WHERE device_id=? AND request_id=?').get(device.id,requestId);
    if(old){if(old.payload_hash!==payload)fail('Este envio já foi recebido com outro conteúdo. Abra uma nova solicitação.',409);json(res,200,{id:old.ticket_id,duplicate:true});db.exec('COMMIT');return true;}
    if(db.prepare('SELECT count(*) AS n FROM support_requests WHERE device_id=? AND created>?').get(device.id,clock()-3600000).n>=10)fail('Limite de 10 chamados por hora neste equipamento. Contate a equipe de suporte.',429);
+   canOpenTicket(device.client_id);
    const description=`Origem: aplicativo instalado\nEquipamento: ${device.name}\nSolicitante informado (não autenticado individualmente): ${b.requester.trim()}\nE-mail informado (não verificado): ${b.email||'Não informado'}\n\n${b.description.trim()}`;
    const r=db.prepare("INSERT INTO tickets(title,description,priority,status_since,client_id) VALUES(?,?,'Média',CURRENT_TIMESTAMP,?)").run(b.title.trim(),description,device.client_id),id=Number(r.lastInsertRowid);db.prepare('INSERT INTO support_requests VALUES(?,?,?,?,?)').run(device.id,requestId,id,payload,clock());desk.opened(id,null);desk.event(id,null,'device',`Aberto pelo aplicativo do equipamento ${device.name}; autorização de dispositivo #${device.id}`,false);config.audit(null,'support.ticket',`Chamado #${id}, dispositivo #${device.id}, empresa #${device.client_id}`);db.exec('COMMIT');json(res,201,{id});return true;
   }catch(error){if(db.isTransaction)db.exec('ROLLBACK');throw error;}

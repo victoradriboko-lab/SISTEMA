@@ -1,4 +1,4 @@
-# Agente Windows e Windows Server — 1.2.2
+# Agente Windows e Windows Server — 1.2.3
 
 Agente de inventário e telemetria para Windows 10/11 ou Windows Server 2016+, com .NET Framework 4.6.2+. Não executa comandos remotos nem coleta senhas ou arquivos pessoais. O aplicativo de abrir chamados usa autorização da empresa, sem login do usuário.
 
@@ -45,3 +45,11 @@ Velocidades desconhecidas de adaptadores WMI (como UINT64_MAX) não são enviada
 O agente agora registra o motivo JSON devolvido pelo servidor em rejeições e confirma no log a primeira coleta aceita. Tokens são ocultados nas mensagens. A auditoria do servidor registra rejeições por empresa/equipamento, sem registrar o token. Erros internos de persistência passam a retornar HTTP 500 em vez de parecerem erros de validação.
 
 O agente 1.2.1 já consegue reenviar as amostras com os contadores especiais após atualizar o servidor. A versão 1.2.2 acrescenta prevenção na coleta e diagnóstico local. O serviço iniciado, por si só, não comprova que a API aceitou a coleta.
+
+## Atualização de serviço existente — versão 1.2.3
+
+O instalador tenta parar normalmente o serviço, inclusive aguardando estados de inicialização/parada. Se o serviço não responder, valida caminho, PID e data de criação do processo antes de encerrar somente o executável do agente. Caminhos ou processos divergentes são preservados; sem identificação segura, a atualização pede reinicialização do Windows.
+
+O agente interrompe consultas de inventário ao receber a solicitação de parada e informa prazo ao controlador de serviços. A fila de coletas pendentes é mantida quando servidor e token não mudam. Ao mudar servidor/token, a fila anterior é arquivada localmente em `C:\ProgramData\ServitecAgent\queue-preservada-*` e não é reenviada no novo contexto. Identidade da máquina, dados da plataforma e histórico são preservados.
+
+Validação de cenários de serviço e fila: `tests/ServiceUpdateTests.ps1`. O teste usa serviços/processos simulados e não encerra processos reais.

@@ -15,7 +15,7 @@ using System.Threading;
 using System.Web.Script.Serialization;
 using Microsoft.Win32;
 
-[assembly: AssemblyVersion("1.2.2.0")]
+[assembly: AssemblyVersion("1.2.3.0")]
 namespace Servitec {
     internal sealed class AgentHttpException : Exception { public readonly int Status; public AgentHttpException(int status) { Status = status; } }
     public sealed class AgentService : ServiceBase {
@@ -44,6 +44,7 @@ namespace Servitec {
         }
         protected override void OnStop() {
             stop.Set();
+            try { RequestAdditionalTime(30000); } catch { }
             if (client != null) client.CancelPendingRequests();
             if (worker != null) worker.Join(TimeSpan.FromSeconds(25));
         }
@@ -79,6 +80,7 @@ namespace Servitec {
                 while (!stop.WaitOne(0)) {
                     try {
                         string payload = json.Serialize(Collect());
+                        if (stop.WaitOne(0)) break;
                         if (Encoding.UTF8.GetByteCount(payload) > 900000) throw new InvalidOperationException("Inventario excedeu limite");
                         string file = Path.Combine(queue, DateTime.UtcNow.Ticks.ToString("D19") + ".json");
                         File.WriteAllText(file + ".tmp", payload, Encoding.UTF8); File.Move(file + ".tmp", file);
@@ -138,11 +140,13 @@ namespace Servitec {
         }
         private List<Dictionary<string, object>> Query(string query, string[] fields, string scope = "root\\cimv2") {
             List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
+            if (stop.WaitOne(0)) return rows;
             try {
                 EnumerationOptions options = new EnumerationOptions { Timeout = TimeSpan.FromSeconds(10), ReturnImmediately = false };
                 using (ManagementObjectSearcher search = new ManagementObjectSearcher(scope, query, options))
                 using (ManagementObjectCollection found = search.Get()) {
                     foreach (ManagementObject item in found) using (item) {
+                        if (stop.WaitOne(0)) break;
                         Dictionary<string, object> row = new Dictionary<string, object>();
                         foreach (string field in fields) row[field] = item[field];
                         rows.Add(row);
@@ -214,6 +218,7 @@ namespace Servitec {
                     using (RegistryKey uninstall = machine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall")) {
                         if (uninstall == null) continue;
                         foreach (string name in uninstall.GetSubKeyNames()) using (RegistryKey key = uninstall.OpenSubKey(name)) {
+                            if (stop.WaitOne(0)) return programs;
                             if (key == null) continue;
                             string display = Text(key.GetValue("DisplayName")), version = Text(key.GetValue("DisplayVersion"));
                             if (display.Length == 0 || !seen.Add(display + "|" + version)) continue;

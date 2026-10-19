@@ -3,7 +3,7 @@ using System.Net;
 
 namespace Servitec {
     public static class AgentPolicy {
-        public const string Version = "1.2.2";
+        public const string Version = "1.2.3";
         public static double? NetworkSpeedMbps(double? bits) { return bits.HasValue && !Double.IsNaN(bits.Value) && !Double.IsInfinity(bits.Value) && bits.Value >= 0 && bits.Value <= 1e15 ? bits.Value / 1000000 : (double?)null; }
         public static string SafeDiagnostic(string message, string secret) {
             string value = message ?? "";

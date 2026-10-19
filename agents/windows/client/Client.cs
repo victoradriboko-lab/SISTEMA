@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
-[assembly: AssemblyVersion("1.2.2.0")]
+[assembly: AssemblyVersion("1.2.3.0")]
 [assembly: AssemblyTitle("SERVITEC VSA - Abrir chamado")]
 namespace Servitec.Client {
     internal static class Program {

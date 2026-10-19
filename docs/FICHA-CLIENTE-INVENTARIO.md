@@ -72,3 +72,7 @@ Por solicitação explícita do proprietário, que informou não haver agentes a
 O servidor aceita valores sentinela numéricos de contadores WMI opcionais como desconhecidos (nulos), sem rejeitar o restante da coleta. Valores malformados e métricas de uso fora dos limites continuam sendo recusados. Em Configurações → Atividades, a ação `agent.sample.rejected` mostra o motivo da rejeição.
 
 O agente 1.2.2 registra o detalhe JSON do erro sem exibir o token e registra `Primeira coleta aceita pelo servidor. Cadastro e comunicacao confirmados.` quando a API confirmar a coleta. O log fica em `C:\ProgramData\ServitecAgent\agent.log`.
+
+### Falha ao parar o serviço durante reinstalação
+
+O instalador 1.2.3 trata serviço já parado, inicializando, parando ou sem resposta. A recuperação de um serviço travado verifica o processo específico e seu caminho antes de encerrá-lo. Processos divergentes são preservados e a atualização é interrompida. Reinstalações conservam o identificador da máquina e não apagam a fila de amostras pendentes.

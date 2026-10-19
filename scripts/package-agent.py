@@ -11,7 +11,7 @@ executable = binary.read_bytes()
 if not executable.startswith(b'MZ'):
     raise SystemExit('O arquivo nao e um executavel Windows.')
 files = {name: (source / name).read_bytes() for name in [
-    'instalar-agente.bat', 'instalar-agente-http.bat', 'instalar-agente.ps1', 'AgentNetwork.ps1', 'desinstalar-agente.bat',
+    'instalar-agente.bat', 'instalar-agente-http.bat', 'instalar-agente.ps1', 'AgentNetwork.ps1', 'AgentService.ps1', 'desinstalar-agente.bat',
     'desinstalar-agente.ps1', 'ServitecAgent.exe.config', 'README.md',
     'ServitecAgent.cs', 'AgentPolicy.cs', 'ServitecAgent.csproj',
 ]}

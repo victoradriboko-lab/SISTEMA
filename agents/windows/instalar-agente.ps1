@@ -6,6 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 try {
     . (Join-Path $PSScriptRoot 'AgentNetwork.ps1')
+    . (Join-Path $PSScriptRoot 'AgentService.ps1')
     $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Clique com o botao direito no BAT e escolha Executar como administrador.' }
     if (([Version](Get-CimInstance Win32_OperatingSystem).Version).Major -lt 10) { throw 'Requer Windows 10/11 ou Windows Server 2016 ou superior.' }
@@ -15,7 +16,7 @@ try {
     if (-not (Test-Path -LiteralPath $binary) -or -not (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'ServitecAgent.sha256'))) { throw 'Extraia servitec-agent-windows.zip e execute o BAT de dentro da pasta extraida. O BAT sozinho nao instala o agente.' }
     $expected = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'ServitecAgent.sha256') -Raw).Trim()
     if ($expected -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash -ne $expected) { throw 'O executavel nao corresponde ao pacote. Baixe e extraia o ZIP completo novamente.' }
-    foreach ($required in @('ServitecAgent.exe.config','desinstalar-agente.ps1','AgentNetwork.ps1')) { if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $required))) { throw 'Extraia todos os arquivos do pacote antes de instalar.' } }
+    foreach ($required in @('ServitecAgent.exe.config','desinstalar-agente.ps1','AgentNetwork.ps1','AgentService.ps1')) { if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $required))) { throw 'Extraia todos os arquivos do pacote antes de instalar.' } }
     $server = $ServerUrl.Trim().TrimEnd('/')
     if ($UseHttp) {
         if (-not $PSBoundParameters.ContainsKey('ServerUrl')) { $server = 'http://vsuarez.ddns.net:3000' }
@@ -82,24 +83,38 @@ try {
     }
     $machineId = [Guid]::NewGuid().ToString()
     $configFile = Join-Path $data 'config.json'
+    $old = $null
+    $sameContext = $false
+    Add-Type -AssemblyName System.Security
     if (Test-Path -LiteralPath $configFile) {
         $old = Get-Content -LiteralPath $configFile -Raw | ConvertFrom-Json
         $parsed = [Guid]::Empty
         if ([Guid]::TryParse([string]$old.machineId,[ref]$parsed)) { $machineId = $parsed.ToString() }
+        try {
+            $oldBytes = [Security.Cryptography.ProtectedData]::Unprotect([Convert]::FromBase64String([string]$old.protectedToken),$null,[Security.Cryptography.DataProtectionScope]::LocalMachine)
+            $oldToken = [Text.Encoding]::UTF8.GetString($oldBytes)
+            $sameContext = ([string]$old.serverUrl).TrimEnd('/') -ceq $server -and $oldToken -ceq $token
+            [Array]::Clear($oldBytes,0,$oldBytes.Length)
+        } catch { $sameContext = $false } finally { $oldToken = $null }
     }
     $support = $null
     if ($installClient) {
         $support = Invoke-ServitecAgentRequest -Server $server -Path '/api/agent/support/enroll' -Method POST -Token $token -Body @{machineId=$machineId;name=$env:COMPUTERNAME}
         if ([string]$support.supportToken -notmatch '^[a-f0-9]{64}$') { throw 'Autorizacao do aplicativo invalida.' }
     }
-    if ($service) { Stop-Service -Name 'ServitecAgent'; $service.WaitForStatus('Stopped',[TimeSpan]::FromSeconds(45)) }
+    $phase = 'service'
+    Stop-ServitecAgentForUpdate -ExpectedPath (Join-Path $target 'ServitecAgent.exe')
     Add-Type -AssemblyName System.Security
     $encrypted = [Security.Cryptography.ProtectedData]::Protect([Text.Encoding]::UTF8.GetBytes($token),$null,[Security.Cryptography.DataProtectionScope]::LocalMachine)
     $config = @{serverUrl=$server;protectedToken=[Convert]::ToBase64String($encrypted);machineId=$machineId;intervalSeconds=30;allowInsecureLan=$allowLan;allowInsecureHttp=$allowPublicHttp}
     $config | ConvertTo-Json | Set-Content -LiteralPath $configFile -Encoding UTF8
     $token = $null
     $queue = Join-Path $data 'queue'
-    if (Test-Path -LiteralPath $queue) { Get-ChildItem -LiteralPath $queue -Filter '*.json' -File | Remove-Item -Force }
+    if ((Test-Path -LiteralPath $queue) -and -not $sameContext) {
+        $archive = Join-Path $data ('queue-preservada-' + [Guid]::NewGuid().ToString('N'))
+        Move-Item -LiteralPath $queue -Destination $archive
+        Write-Host 'A fila anterior foi preservada separadamente porque o servidor/token mudou.'
+    }
     Copy-Item -LiteralPath $binary -Destination (Join-Path $target 'ServitecAgent.exe') -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ServitecAgent.exe.config') -Destination $target -Force
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'desinstalar-agente.ps1') -Destination $target -Force
@@ -152,6 +167,7 @@ try {
     exit 0
 } catch {
     Write-Host ('ERRO: ' + $_.Exception.Message) -ForegroundColor Red
-    Write-Host 'Confira HTTPS, certificado, acesso ao servidor e o token da empresa.'
+    if ($phase -eq 'service') { Write-Host 'Falha ao atualizar o servico local. O erro acima nao e uma rejeicao de URL ou token.' }
+    else { Write-Host 'Confira o acesso ao servidor e o token da empresa.' }
     exit 1
 }

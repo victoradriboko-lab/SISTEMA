@@ -361,3 +361,7 @@ Abra **Clientes → Empresas e contratos → Novo cliente**, informe o nome da e
 ### Download de Agentes
 
 O menu **Download de Agentes** abre uma página própria com os pacotes Windows/Windows Server: **Instalador EXE**, **Pacote ZIP** e **Como instalar**. O bloco foi movido da tela Equipamentos para essa página. O acesso exige `assets.write`.
+
+### Filtrar equipamentos por cliente
+
+Em **Inventário → Equipamentos**, selecione a empresa em **Filtrar inventário por cliente**. **Todos os clientes** ou **Limpar filtro** mostram o inventário completo, incluindo equipamentos sem cliente. A tela informa o total exibido e mantém o filtro durante a atualização automática. A opção **Sem cliente** mostra apenas cadastros sem vínculo.

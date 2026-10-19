@@ -1,5 +1,5 @@
 param(
-    [string]$ServerUrl = 'https://vsuarez.ddns.net:3003',
+    [string]$ServerUrl = 'https://vsuarez.ddns.net:3000',
     [switch]$MonitorOnly,
     [switch]$UseHttp
 )
@@ -18,7 +18,7 @@ try {
     foreach ($required in @('ServitecAgent.exe.config','desinstalar-agente.ps1','AgentNetwork.ps1')) { if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $required))) { throw 'Extraia todos os arquivos do pacote antes de instalar.' } }
     $server = $ServerUrl.Trim().TrimEnd('/')
     if ($UseHttp) {
-        if (-not $PSBoundParameters.ContainsKey('ServerUrl')) { $server = 'http://vsuarez.ddns.net:3002' }
+        if (-not $PSBoundParameters.ContainsKey('ServerUrl')) { $server = 'http://vsuarez.ddns.net:3000' }
         $originalUri = [Uri]$server
         $builder = New-Object UriBuilder($originalUri)
         $builder.Scheme = 'http'

@@ -1,3 +1,4 @@
+import {extendInventory} from './telemetry-inventory.mjs';
 import {randomUUID} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
@@ -15,10 +16,10 @@ function normalizeInventory(value){
   if(!result.hostname)fail('Nome do computador é obrigatório no inventário');
   result.productType=number(value.productType,3);
   result.processors=list(value.processors??[],32,p=>({name:text(p.name),cores:number(p.cores,4096),logicalProcessors:number(p.logicalProcessors,8192)}));
-  result.network=list(value.network??[],32,n=>{if(!Array.isArray(n.addresses)||n.addresses.length>32)fail('Endereços de rede inválidos');return {name:text(n.name),mac:text(n.mac,80),addresses:n.addresses.map(v=>text(v,100))};});
+  result.network=list(value.network??[],32,n=>{if(!Array.isArray(n.addresses)||n.addresses.length>32)fail('Endereços de rede inválidos');return {name:text(n.name),mac:text(n.mac,80),addresses:n.addresses.map(v=>text(v,100)),speedMbps:number(n.speedMbps,1e9),connectionStatus:number(n.connectionStatus,20),enabled:n.enabled==null?null:typeof n.enabled==='boolean'?n.enabled:fail('Estado de rede inválido')};});
   result.programs=list(value.programs??[],500,p=>({name:text(p.name),version:text(p.version),publisher:text(p.publisher)}));
   result.services=list(value.services??[],300,s=>({name:text(s.name),displayName:text(s.displayName),state:text(s.state,80),startMode:text(s.startMode,80)}));
-  return result;
+  return extendInventory(value,result,{text,number,list,object,fail});
 }
 export function normalizeHeartbeat(payload,now=Date.now()){
   if(!object(payload))fail('Mensagem inválida');
@@ -45,7 +46,7 @@ export function createTelemetry({db,body,json,config,root,clients}){
   const columns=db.prepare('PRAGMA table_info(assets)').all().map(c=>c.name);
   for(const name of ['agent_info','inventory','machine_id','last_metrics_at','last_inventory_at'])if(!columns.includes(name))db.exec(`ALTER TABLE assets ADD COLUMN ${name} TEXT`);
   db.exec('CREATE TABLE IF NOT EXISTS telemetry(id INTEGER PRIMARY KEY,asset_id INTEGER NOT NULL,sample_id TEXT NOT NULL,observed_at INTEGER NOT NULL,received_at INTEGER NOT NULL,metrics TEXT NOT NULL,UNIQUE(asset_id,sample_id)); CREATE INDEX IF NOT EXISTS telemetry_asset_time ON telemetry(asset_id,observed_at DESC)');
-  const cleanup=new Map();
+  const cleanup=new Map();let observeInventory=()=>{};
   async function publicRoute(req,res,path){
     if(!(path==='/api/heartbeat'&&req.method==='POST'||path==='/api/agent/check'&&req.method==='GET'))return false;
     const token=(req.headers.authorization||'').replace(/^Bearer /,'');
@@ -66,16 +67,16 @@ export function createTelemetry({db,body,json,config,root,clients}){
       db.prepare('INSERT INTO telemetry(asset_id,sample_id,observed_at,received_at,metrics) VALUES(?,?,?,?,?)').run(asset.id,sample.sampleId,sample.observedAt,now,JSON.stringify(sample.metrics));
       if(!current.last_metrics_at||Date.parse(current.last_metrics_at)<=sample.observedAt)db.prepare('UPDATE assets SET metrics=?,last_metrics_at=?,os=? WHERE id=?').run(JSON.stringify(sample.metrics),observed,sample.os||current.os,asset.id);
       if(now-sample.observedAt<=120000)db.prepare('UPDATE assets SET last_seen=? WHERE id=?').run(new Date(now).toISOString(),asset.id);
-      if(!sample.legacy){db.prepare('UPDATE assets SET machine_id=? WHERE id=?').run(sample.machineId,asset.id);if(!current.agent_info||!current.last_metrics_at||Date.parse(current.last_metrics_at)<=sample.observedAt)db.prepare('UPDATE assets SET agent_info=? WHERE id=?').run(JSON.stringify(sample.agent),asset.id);if(sample.inventory&&(!current.last_inventory_at||Date.parse(current.last_inventory_at)<=sample.observedAt))db.prepare('UPDATE assets SET inventory=?,last_inventory_at=? WHERE id=?').run(JSON.stringify(sample.inventory),observed,asset.id);}
+      if(!sample.legacy){db.prepare('UPDATE assets SET machine_id=? WHERE id=?').run(sample.machineId,asset.id);if(!current.agent_info||!current.last_metrics_at||Date.parse(current.last_metrics_at)<=sample.observedAt)db.prepare('UPDATE assets SET agent_info=? WHERE id=?').run(JSON.stringify(sample.agent),asset.id);if(sample.inventory&&(!current.last_inventory_at||Date.parse(current.last_inventory_at)<=sample.observedAt)){const inventory={...jsonOrNull(db.prepare('SELECT inventory FROM assets WHERE id=?').get(asset.id)?.inventory),...sample.inventory};observeInventory(asset.id,inventory,observed);db.prepare('UPDATE assets SET inventory=?,last_inventory_at=? WHERE id=?').run(JSON.stringify(inventory),observed,asset.id);}}
       if(now-(cleanup.get(asset.id)||0)>3600000){db.prepare('DELETE FROM telemetry WHERE asset_id=? AND observed_at<?').run(asset.id,now-48*3600000);db.prepare('DELETE FROM telemetry WHERE asset_id=? AND id NOT IN (SELECT id FROM telemetry WHERE asset_id=? ORDER BY observed_at DESC LIMIT 5760)').run(asset.id,asset.id);cleanup.set(asset.id,now);}
       db.exec('COMMIT');
     }catch(e){db.exec('ROLLBACK');throw e;}
     json(res,200,{ok:true,serverTime:new Date(now).toISOString(),requestInventory:!sample.legacy&&!sample.inventory&&!current.has_inventory});return true;
   }
   async function handle(req,res,path,user){
-    if(['/api/agent/windows-package','/api/agent/windows-installer'].includes(path)&&req.method==='GET'){
+    if(['/api/agent/windows-package','/api/agent/windows-installer','/api/agent/windows-installer-http'].includes(path)&&req.method==='GET'){
       if(!config.allowed(user,'assets.write'))fail('Sem permissão para instalar agentes',403);
-      const installer=path.endsWith('windows-installer');const filename=installer?'ServitecAgentSetup.exe':'servitec-agent-windows.zip';
+      const installer=path.includes('windows-installer');const filename=path.endsWith('windows-installer-http')?'ServitecAgentSetupHttp.exe':installer?'ServitecAgentSetup.exe':'servitec-agent-windows.zip';
       let data;try{data=readFileSync(join(root,'agents/windows',filename));}catch{fail('Pacote do agente ainda não foi gerado no servidor',503);}
       res.writeHead(200,{'Content-Type':installer?'application/octet-stream':'application/zip','Content-Disposition':`attachment; filename="${filename}"`});res.end(data);return true;
     }
@@ -87,5 +88,5 @@ export function createTelemetry({db,body,json,config,root,clients}){
     }
     return false;
   }
-  return {publicRoute,handle};
+  return {publicRoute,handle,setInventoryObserver:fn=>{observeInventory=fn;}};
 }

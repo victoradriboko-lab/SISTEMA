@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Security.AccessControl;
 using System.Security.Principal;
 
-[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
 [assembly: AssemblyTitle("Servitec - Instalador do agente")]
 [assembly: AssemblyProduct("Servitec Agent Setup")]
 namespace Servitec.Setup {
@@ -16,7 +16,13 @@ namespace Servitec.Setup {
             int result = 1;
             Console.Title = "Servitec - Instalacao do agente Windows";
             Console.WriteLine("SERVITEC | Agente para Windows e Windows Server");
-            Console.WriteLine("Informe o endereco do servidor e o token quando solicitado.");
+            #if HTTP_DEFAULT
+            const bool useHttp = true;
+            Console.WriteLine("Servidor: http://vsuarez.ddns.net | Informe somente o token da empresa.");
+#else
+            const bool useHttp = false;
+            Console.WriteLine("Servidor: https://vsuarez.ddns.net | Informe somente o token da empresa.");
+#endif
             try {
                 using (WindowsIdentity identity = WindowsIdentity.GetCurrent()) {
                     if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator)) throw new InvalidOperationException("Execute o instalador como administrador.");
@@ -48,7 +54,7 @@ namespace Servitec.Setup {
                 string script = Path.Combine(staging, "instalar-agente.ps1");
                 ProcessStartInfo start = new ProcessStartInfo {
                     FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe"),
-                    Arguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File \"" + script + "\"",
+                    Arguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File \"" + script + "\"" + (useHttp ? " -UseHttp" : ""),
                     WorkingDirectory = staging,
                     UseShellExecute = false
                 };

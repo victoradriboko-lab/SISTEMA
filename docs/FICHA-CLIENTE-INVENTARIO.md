@@ -23,7 +23,7 @@ A tabela compacta apresenta status, uptime, cliente, nome, IP/MAC quando coletad
 
 **Atualizar em massa** permite alterar apenas os campos marcados: responsável, grupo, perfil e home office. Selecione até 100 equipamentos. A operação valida o lote completo antes de gravar, preservando tokens, empresa, inventário e métricas. Grupo/perfil são rótulos de organização e não alteram permissões. Não há exclusão de dispositivos nesta atualização.
 
-Vulnerabilidades, antivírus, atualização do sistema e SNMP ainda não são coletados pelo agente atual; a interface informa essa ausência. Não interpreta falta de dados como ausência de vulnerabilidades. CPU/RAM/disco ficam cinza quando a amostra é antiga ou ausente. O contador de tickets considera apenas tickets vinculados explicitamente ao equipamento.
+Vulnerabilidades, atualização do sistema e SNMP ainda não são coletados; a interface informa essa ausência. Antivírus exige o agente 1.2 e um provedor compatível no Windows. Não interpreta falta de dados como ausência de vulnerabilidades. CPU/RAM/disco ficam cinza quando a amostra é antiga ou ausente. O contador de tickets considera apenas tickets vinculados explicitamente ao equipamento.
 
 As ferramentas anteriores de empresas, tokens, duplicidades e aplicativos autorizados permanecem no bloco expansível acima da tabela. **Ver** abre a telemetria existente; não executa comandos nem força coleta na máquina.
 
@@ -32,3 +32,31 @@ As ferramentas anteriores de empresas, tokens, duplicidades e aplicativos autori
 Antes de atualizar, use o backup completo do sistema ou uma cópia consistente com o processo parado. Preserve a pasta `DATA_DIR`, o banco SQLite e as chaves locais, incluindo `security.key` e a chave do e-mail se existente. Atualize somente o código e dependências e reinicie o processo. Não substitua a pasta de dados por dados de demonstração.
 
 Esta versão cria tabelas complementares e índices com `IF NOT EXISTS`; não apaga nem recria registros antigos e não redefine senhas ou tokens. SLA novo usa o calendário salvo na abertura do ticket; tickets anteriores mantêm o snapshot e seus prazos.
+
+## Ficha detalhada de cada equipamento
+
+No inventário, clique no nome ou em **Ver**. A ficha reúne dados gerais e 18 seções: telemetria, alterações, periféricos, armazenamento, overview, alertas, contas, software, redes, serviços, vídeo, perfil, remoto, tickets, senhas, documentos, fotos e vulnerabilidades.
+
+O agente Windows 1.2 coleta placa-mãe, RAM por slot, periféricos, vídeo, discos físicos, usuário logado, build do Windows e estado do Defender quando o provedor estiver disponível, além da coleta anterior. Dados indisponíveis aparecem como não coletados; ausência de estado do Defender não é interpretada como antivírus desligado. Informações do produto antivírus de terceiros são reportadas sem presumir seu estado. Os programas não são comparados a um catálogo de versões e não são instalados remotamente. Temperatura, erros SMART, scanner CVE, contas locais e senhas do Windows não são coletados.
+
+A ficha distingue campos manuais dos campos recebidos do agente. Apelido, unidade, patrimônio, compra, garantia, observações, localização e ID RustDesk podem ser preenchidos manualmente sem substituir dados coletados. IP externo e coordenadas não são obtidos automaticamente. O mapa usa apenas coordenadas informadas. As alterações de inventário são registradas a partir desta versão, sem reconstruir histórico inexistente; a tela mostra até 200 alterações dos últimos 30 dias. O histórico armazenado permanece no banco.
+
+As listas têm pesquisa e paginação. Os gráficos usam amostras recebidas; o painel mostra até 25 leituras recentes, e a API conserva o histórico recente de até 120. Amostras antigas enviadas após uma queda não fazem o equipamento aparecer como online. A retenção da telemetria continua em até 48 horas.
+
+Tickets criados na ficha ficam vinculados ao equipamento e à sua empresa. **Reconhecer alerta** registra ciência, sem forçar uma resolução falsa. O serviço resolve o alerta quando a condição deixa de ocorrer. O acesso remoto continua exigindo autorização explícita, RustDesk e a permissão existente.
+
+Documentos e fotos ficam vinculados ao equipamento no SQLite, com limite de 512 KB por arquivo e 20 MB por equipamento. Fotos aceitam PNG, JPEG e WebP, com conferência da assinatura do arquivo. Credenciais são vinculadas ao cofre criptografado da mesma empresa; a listagem não retorna segredos. A revelação exige a autenticação já usada pelo cofre e o código de segundo fator, se habilitado. A tela oculta o segredo após 30 segundos.
+
+### Equipamento de teste
+
+Administradores podem usar **Inventário → Equipamentos → Equipamento de teste**. Essa ação explícita cria uma empresa separada e o equipamento **NOTE-DEMO-SERVITEC**, identificados como demonstração. Dados e gráficos são simulados. A atualização do código nunca cria equipamentos de exemplo automaticamente.
+
+Clicar novamente reutiliza a demonstração existente. **Simular nova leitura** atualiza somente esse equipamento. Equipamentos reais recusam a operação. Sem simular novamente, a última comunicação envelhece normalmente; a demonstração não simula conexão permanente. Ela aparece na listagem e nos totais da empresa demonstrativa, sem se misturar aos dados de outra empresa.
+
+### Atualizar o agente
+
+Atualize o código do servidor primeiro. Baixe o instalador atual em Download de Agentes e reinstale nos equipamentos para receber os novos campos. Agentes antigos continuam aceitos e não apagam campos ampliados anteriores apenas por omiti-los. A coleta completa acontece periodicamente (até seis horas); métricas continuam a cada 30 segundos.
+
+Os instaladores vêm configurados para `https://vsuarez.ddns.net` (padrão) ou, quando escolhido explicitamente, `http://vsuarez.ddns.net`. Só é necessário informar o token. HTTP transmite os dados sem criptografia. Não há fallback automático de HTTPS para HTTP. O instalador testa a API, usa limite de 45 segundos e até duas tentativas para falhas transitórias; rejeita redirecionamentos e continua validando certificados. Publicar o código não configura o roteador, NAT, DNS, firewall ou proxy reverso: HTTP/80 e HTTPS/443 precisam encaminhar à porta interna correta (3000, não ao portal 3001).
+
+[Prévia da ficha com equipamento demonstrativo e dados simulados](imagens/equipamento-demo.png).

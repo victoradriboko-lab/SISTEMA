@@ -436,3 +436,7 @@ As preferências novas ficam em tabela adicional, com acesso ativo e limite ilim
 ### Ficha individual e inventário compacto
 
 A ficha reúne as 13 seções por empresa, com cadastro de unidades, contatos, equipes, setores e usuários do portal, contrato/SLA, agendamentos, alertas, relatórios e expediente. O inventário possui filtros combinados, tabela compacta, paginação, exportação e atualização em massa de rótulos e responsável. Consulte [instruções e preservação de dados](docs/FICHA-CLIENTE-INVENTARIO.md).
+
+### Ficha detalhada de equipamentos e agente 1.2
+
+O inventário abre uma ficha com 18 seções, coleta Windows ampliada, histórico de alterações, documentos/fotos, tickets e vínculos ao cofre. O botão **Equipamento de teste** cria uma demonstração somente quando acionado por administrador. Atualize o servidor e reinstale o agente para receber novos campos. O instalador já usa `https://vsuarez.ddns.net`; há alternativa HTTP explícita. Veja [campos, limitações e instruções](docs/FICHA-CLIENTE-INVENTARIO.md).

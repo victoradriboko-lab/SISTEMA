@@ -15,7 +15,7 @@ using System.Threading;
 using System.Web.Script.Serialization;
 using Microsoft.Win32;
 
-[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
 namespace Servitec {
     internal sealed class AgentHttpException : Exception { public readonly int Status; public AgentHttpException(int status) { Status = status; } }
     public sealed class AgentService : ServiceBase {
@@ -33,7 +33,7 @@ namespace Servitec {
         public AgentService() { ServiceName = "ServitecAgent"; CanStop = true; AutoLog = false; }
         public static void Main(string[] args) {
             if (args.Length == 1 && args[0] == "--version") { Console.WriteLine(AgentPolicy.Version); return; }
-            if (args.Length == 2 && args[0] == "--check-url") { try { AgentPolicy.ServerUri(args[1], true); Console.WriteLine("URL aceita"); } catch { Environment.ExitCode = 1; } return; }
+            if (args.Length == 2 && (args[0] == "--check-url" || args[0] == "--check-url-http")) { try { AgentPolicy.ServerUri(args[1], true, args[0] == "--check-url-http"); Console.WriteLine("URL aceita"); } catch { Environment.ExitCode = 1; } return; }
             ServiceBase.Run(new AgentService());
         }
         protected override void OnStart(string[] args) {
@@ -56,7 +56,8 @@ namespace Servitec {
         private void Configure() {
             Dictionary<string, object> config = json.Deserialize<Dictionary<string, object>>(File.ReadAllText(Path.Combine(directory, "config.json"), Encoding.UTF8));
             bool allowLan = config.ContainsKey("allowInsecureLan") && Convert.ToBoolean(config["allowInsecureLan"]);
-            Uri url = AgentPolicy.ServerUri(Convert.ToString(config["serverUrl"]), allowLan);
+            bool allowPublicHttp = config.ContainsKey("allowInsecureHttp") && Convert.ToBoolean(config["allowInsecureHttp"]);
+            Uri url = AgentPolicy.ServerUri(Convert.ToString(config["serverUrl"]), allowLan, allowPublicHttp);
             endpoint = new Uri(url, "/api/heartbeat").AbsoluteUri;
             machineId = Convert.ToString(config["machineId"]);
             Guid parsed; if (!Guid.TryParse(machineId, out parsed)) throw new ArgumentException("machineId invalido");
@@ -65,7 +66,7 @@ namespace Servitec {
             if (token.Length != 64 || token.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("Token invalido");
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseProxy = true });
-            client.Timeout = TimeSpan.FromSeconds(15);
+            client.Timeout = TimeSpan.FromSeconds(45);
             try { cpu = new PerformanceCounter("Processor", "% Processor Time", "_Total"); cpu.NextValue(); } catch { cpu = null; }
         }
         private void Run() {
@@ -121,11 +122,11 @@ namespace Servitec {
             }
             File.Delete(path);
         }
-        private List<Dictionary<string, object>> Query(string query, string[] fields) {
+        private List<Dictionary<string, object>> Query(string query, string[] fields, string scope = "root\\cimv2") {
             List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
             try {
                 EnumerationOptions options = new EnumerationOptions { Timeout = TimeSpan.FromSeconds(10), ReturnImmediately = false };
-                using (ManagementObjectSearcher search = new ManagementObjectSearcher("root\\cimv2", query, options))
+                using (ManagementObjectSearcher search = new ManagementObjectSearcher(scope, query, options))
                 using (ManagementObjectCollection found = search.Get()) {
                     foreach (ManagementObject item in found) using (item) {
                         Dictionary<string, object> row = new Dictionary<string, object>();
@@ -140,7 +141,7 @@ namespace Servitec {
         private static double? Number(object value) { double n; return value != null && Double.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out n) ? (double?)n : null; }
         private static string Text(object value) { string text = Convert.ToString(value); return text.Length > 500 ? text.Substring(0, 500) : text; }
         private Dictionary<string, object> Collect() {
-            Dictionary<string, object> os = Query("SELECT Caption,Version,OSArchitecture,TotalVisibleMemorySize,FreePhysicalMemory,LastBootUpTime,ProductType FROM Win32_OperatingSystem", new [] { "Caption","Version","OSArchitecture","TotalVisibleMemorySize","FreePhysicalMemory","LastBootUpTime","ProductType" }).FirstOrDefault();
+            Dictionary<string, object> os = Query("SELECT Caption,Version,OSArchitecture,TotalVisibleMemorySize,FreePhysicalMemory,LastBootUpTime,ProductType,BuildNumber FROM Win32_OperatingSystem", new [] { "Caption","Version","OSArchitecture","TotalVisibleMemorySize","FreePhysicalMemory","LastBootUpTime","ProductType","BuildNumber" }).FirstOrDefault();
             double? cpuValue = null;
             try { if (cpu != null) cpuValue = Math.Max(0, Math.Min(100, Math.Round(cpu.NextValue(), 1))); } catch { }
             if (!cpuValue.HasValue) { double[] loads = Query("SELECT LoadPercentage FROM Win32_Processor", new [] { "LoadPercentage" }).Select(p => Number(Value(p,"LoadPercentage"))).Where(n => n.HasValue).Select(n => n.Value).ToArray(); if (loads.Length > 0) cpuValue = loads.Average(); }
@@ -162,19 +163,33 @@ namespace Servitec {
             return payload;
         }
         private Dictionary<string, object> Inventory(Dictionary<string, object> os) {
-            Dictionary<string, object> system = Query("SELECT Manufacturer,Model,Domain FROM Win32_ComputerSystem",new [] {"Manufacturer","Model","Domain"}).FirstOrDefault();
+            Dictionary<string, object> system = Query("SELECT Manufacturer,Model,Domain,UserName,TotalPhysicalMemory,PCSystemType FROM Win32_ComputerSystem",new [] {"Manufacturer","Model","Domain","UserName","TotalPhysicalMemory","PCSystemType"}).FirstOrDefault();
             Dictionary<string, object> bios = Query("SELECT SerialNumber,SMBIOSBIOSVersion FROM Win32_BIOS",new [] {"SerialNumber","SMBIOSBIOSVersion"}).FirstOrDefault();
             List<Dictionary<string, object>> processors = Query("SELECT Name,NumberOfCores,NumberOfLogicalProcessors FROM Win32_Processor",new [] {"Name","NumberOfCores","NumberOfLogicalProcessors"});
+            List<Dictionary<string, object>> adapters = Query("SELECT MACAddress,Speed,NetConnectionStatus FROM Win32_NetworkAdapter",new [] {"MACAddress","Speed","NetConnectionStatus"});
             List<Dictionary<string, object>> network = new List<Dictionary<string, object>>();
-            foreach (Dictionary<string, object> n in Query("SELECT Description,MACAddress,IPAddress FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True",new [] {"Description","MACAddress","IPAddress"}).Take(32)) {
-                network.Add(new Dictionary<string, object> { {"name",Text(Value(n,"Description"))}, {"mac",Text(Value(n,"MACAddress"))}, {"addresses",Value(n,"IPAddress") ?? new string[0]} });
+            foreach (Dictionary<string, object> n in Query("SELECT Description,MACAddress,IPAddress,IPEnabled FROM Win32_NetworkAdapterConfiguration",new [] {"Description","MACAddress","IPAddress","IPEnabled"}).Take(32)) {
+                Dictionary<string, object> adapter = adapters.FirstOrDefault(a => Text(Value(a,"MACAddress")).Equals(Text(Value(n,"MACAddress")),StringComparison.OrdinalIgnoreCase));
+                network.Add(new Dictionary<string, object> { {"name",Text(Value(n,"Description"))}, {"mac",Text(Value(n,"MACAddress"))}, {"addresses",Value(n,"IPAddress") ?? new string[0]}, {"enabled",Value(n,"IPEnabled")}, {"speedMbps",Number(Value(adapter,"Speed")) / 1000000}, {"connectionStatus",Number(Value(adapter,"NetConnectionStatus"))} });
             }
-            List<Dictionary<string, object>> services = Query("SELECT Name,DisplayName,State,StartMode FROM Win32_Service WHERE StartMode='Auto'",new [] {"Name","DisplayName","State","StartMode"}).Take(300).Select(s => new Dictionary<string,object> { {"name",Text(Value(s,"Name"))}, {"displayName",Text(Value(s,"DisplayName"))}, {"state",Text(Value(s,"State"))}, {"startMode","Auto"} }).ToList();
+            List<Dictionary<string, object>> services = Query("SELECT Name,DisplayName,State,StartMode FROM Win32_Service ",new [] {"Name","DisplayName","State","StartMode"}).Take(300).Select(s => new Dictionary<string,object> { {"name",Text(Value(s,"Name"))}, {"displayName",Text(Value(s,"DisplayName"))}, {"state",Text(Value(s,"State"))}, {"startMode",Text(Value(s,"StartMode"))} }).ToList();
+            Dictionary<string, object> board = Query("SELECT Manufacturer,Product,SerialNumber,Version FROM Win32_BaseBoard",new [] {"Manufacturer","Product","SerialNumber","Version"}).FirstOrDefault();
+            Dictionary<string, object> slots = Query("SELECT MemoryDevices FROM Win32_PhysicalMemoryArray",new [] {"MemoryDevices"}).FirstOrDefault();
+            List<Dictionary<string, object>> memoryModules = Query("SELECT DeviceLocator,Capacity,SMBIOSMemoryType,Speed,Manufacturer,PartNumber FROM Win32_PhysicalMemory",new [] {"DeviceLocator","Capacity","SMBIOSMemoryType","Speed","Manufacturer","PartNumber"}).Take(64).Select(m => new Dictionary<string,object> { {"slot",Text(Value(m,"DeviceLocator"))},{"capacity",Number(Value(m,"Capacity"))},{"type",Number(Value(m,"SMBIOSMemoryType"))},{"speedMHz",Number(Value(m,"Speed"))},{"manufacturer",Text(Value(m,"Manufacturer"))},{"partNumber",Text(Value(m,"PartNumber"))} }).ToList();
+            List<Dictionary<string, object>> videos = Query("SELECT Name,AdapterRAM,DriverVersion,AdapterCompatibility FROM Win32_VideoController",new [] {"Name","AdapterRAM","DriverVersion","AdapterCompatibility"}).Take(32).Select(v => new Dictionary<string,object> { {"name",Text(Value(v,"Name"))},{"vram",Number(Value(v,"AdapterRAM"))},{"driver",Text(Value(v,"DriverVersion"))},{"manufacturer",Text(Value(v,"AdapterCompatibility"))} }).ToList();
+            List<Dictionary<string, object>> peripherals = Query("SELECT Name,Manufacturer,PNPClass FROM Win32_PnPEntity WHERE PNPClass='Mouse' OR PNPClass='Keyboard' OR PNPClass='Monitor' OR PNPClass='MEDIA' OR PNPClass='Printer'",new [] {"Name","Manufacturer","PNPClass"}).Take(200).Select(v => new Dictionary<string,object> { {"name",Text(Value(v,"Name"))},{"manufacturer",Text(Value(v,"Manufacturer"))},{"type",Text(Value(v,"PNPClass"))} }).ToList();
+            List<Dictionary<string, object>> storage = Query("SELECT Model,Size,MediaType,InterfaceType,SerialNumber,Status FROM Win32_DiskDrive",new [] {"Model","Size","MediaType","InterfaceType","SerialNumber","Status"}).Take(64).Select(v => new Dictionary<string,object> { {"name",Text(Value(v,"Model"))},{"size",Number(Value(v,"Size"))},{"mediaType",Text(Value(v,"MediaType"))},{"interfaceType",Text(Value(v,"InterfaceType"))},{"serialNumber",Text(Value(v,"SerialNumber"))},{"status",Text(Value(v,"Status"))} }).ToList();
+            Dictionary<string, object> defender = Query("SELECT AntivirusEnabled,RealTimeProtectionEnabled FROM MSFT_MpComputerStatus",new [] {"AntivirusEnabled","RealTimeProtectionEnabled"},"root\\Microsoft\\Windows\\Defender").FirstOrDefault();
+            List<Dictionary<string, object>> antivirus = Query("SELECT displayName,productState FROM AntiVirusProduct",new [] {"displayName","productState"},"root\\SecurityCenter2").Take(16).Select(v => new Dictionary<string,object> { {"name",Text(Value(v,"displayName"))},{"productState",Number(Value(v,"productState"))} }).ToList();
             return new Dictionary<string, object> {
                 {"hostname",Environment.MachineName}, {"manufacturer",Text(Value(system,"Manufacturer"))}, {"model",Text(Value(system,"Model"))}, {"serialNumber",Text(Value(bios,"SerialNumber"))}, {"biosVersion",Text(Value(bios,"SMBIOSBIOSVersion"))}, {"domain",Text(Value(system,"Domain"))},
                 {"osVersion",Text(Value(os,"Version"))}, {"architecture",Text(Value(os,"OSArchitecture"))}, {"productType",Number(Value(os,"ProductType"))},
                 {"processors",processors.Select(p => new Dictionary<string,object> { {"name",Text(Value(p,"Name"))}, {"cores",Number(Value(p,"NumberOfCores"))}, {"logicalProcessors",Number(Value(p,"NumberOfLogicalProcessors"))} }).ToArray()},
-                {"network",network}, {"programs",Programs()}, {"services",services}
+                {"network",network}, {"programs",Programs()}, {"services",services},
+                {"deviceType",Number(Value(system,"PCSystemType")) == 2 ? "Notebook" : Number(Value(os,"ProductType")) == 3 ? "Servidor" : Number(Value(system,"PCSystemType")) == 1 ? "Desktop" : "Não identificado"}, {"loggedUser",Text(Value(system,"UserName"))},{"osBuild",Text(Value(os,"BuildNumber"))},{"totalMemory",Number(Value(system,"TotalPhysicalMemory"))},{"memorySlots",Number(Value(slots,"MemoryDevices"))},
+                {"motherboard",new Dictionary<string,object> { {"manufacturer",Text(Value(board,"Manufacturer"))},{"product",Text(Value(board,"Product"))},{"serialNumber",Text(Value(board,"SerialNumber"))},{"version",Text(Value(board,"Version"))} }},
+                {"memoryModules",memoryModules},{"video",videos},{"peripherals",peripherals},{"storage",storage},
+                {"security",new Dictionary<string,object> { {"antivirusEnabled",Value(defender,"AntivirusEnabled")},{"realTimeProtection",Value(defender,"RealTimeProtectionEnabled")},{"products",antivirus} }}
             };
         }
         private List<Dictionary<string, object>> Programs() {

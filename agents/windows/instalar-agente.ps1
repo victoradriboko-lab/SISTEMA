@@ -1,5 +1,11 @@
+param(
+    [string]$ServerUrl = 'https://vsuarez.ddns.net',
+    [switch]$MonitorOnly,
+    [switch]$UseHttp
+)
 $ErrorActionPreference = 'Stop'
 try {
+    . (Join-Path $PSScriptRoot 'AgentNetwork.ps1')
     $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Clique com o botao direito no BAT e escolha Executar como administrador.' }
     if (([Version](Get-CimInstance Win32_OperatingSystem).Version).Major -lt 10) { throw 'Requer Windows 10/11 ou Windows Server 2016 ou superior.' }
@@ -9,31 +15,40 @@ try {
     if (-not (Test-Path -LiteralPath $binary) -or -not (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'ServitecAgent.sha256'))) { throw 'Extraia servitec-agent-windows.zip e execute o BAT de dentro da pasta extraida. O BAT sozinho nao instala o agente.' }
     $expected = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'ServitecAgent.sha256') -Raw).Trim()
     if ($expected -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash -ne $expected) { throw 'O executavel nao corresponde ao pacote. Baixe e extraia o ZIP completo novamente.' }
-    foreach ($required in @('ServitecAgent.exe.config','desinstalar-agente.ps1')) { if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $required))) { throw 'Extraia todos os arquivos do pacote antes de instalar.' } }
-    Write-Host 'Exemplo HTTPS: https://ti.suaempresa.com.br'
-    Write-Host 'Teste LAN: http://192.168.1.100:3000 (apenas IP privado; sem criptografia)'
-    $server = (Read-Host 'Endereco do servidor, incluindo http:// ou https://').Trim().TrimEnd('/')
+    foreach ($required in @('ServitecAgent.exe.config','desinstalar-agente.ps1','AgentNetwork.ps1')) { if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $required))) { throw 'Extraia todos os arquivos do pacote antes de instalar.' } }
+    $server = $ServerUrl.Trim().TrimEnd('/')
+    if ($UseHttp) {
+        $originalUri = [Uri]$server
+        $builder = New-Object UriBuilder($originalUri)
+        $builder.Scheme = 'http'
+        if ($originalUri.IsDefaultPort) { $builder.Port = -1 }
+        $server = $builder.Uri.AbsoluteUri.TrimEnd('/')
+    }
+    Write-Host ('Servidor pre-configurado: ' + $server)
     $uri = [Uri]$server
     $allowLan = $false
-    & $binary --check-url $server
-    if ($LASTEXITCODE -ne 0) { throw 'URL invalida. Use HTTPS sem caminho, ou HTTP com IP privado da rede local.' }
-    if ($uri.Scheme -eq 'http') {
+    if ($UseHttp) { & $binary --check-url-http $server } else { & $binary --check-url $server }
+    if ($LASTEXITCODE -ne 0) { throw 'URL invalida. Use HTTPS sem caminho ou o instalador HTTP para acesso externo por HTTP.' }
+    $allowPublicHttp = [bool]$UseHttp -and $uri.Scheme -eq 'http'
+    if ($allowPublicHttp) { Write-Host 'Modo HTTP externo selecionado: token e dados trafegam sem criptografia.' -ForegroundColor Yellow }
+    if ($uri.Scheme -eq 'http' -and -not $allowPublicHttp) {
         if ((Read-Host 'HTTP nao criptografa os dados. Confirma uso somente na rede local? Digite SIM') -cne 'SIM') { throw 'Use um endereco HTTPS para continuar.' }
         $allowLan = $true
     }
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Write-Host 'Verificando a API do servidor antes de solicitar o token...'
+    $state = Invoke-ServitecAgentRequest -Server $server -Path '/api/state'
+    if ($state.portal -eq 'client') { throw 'O dominio aponta para o Painel do Cliente (porta 3001). Configure o proxy HTTPS para o sistema interno na porta 3000.' }
+    if ($null -eq $state.initialized) { throw 'A resposta nao identifica a API do sistema interno. Confira o destino do proxy HTTPS.' }
     $secure = Read-Host 'Cole o token da empresa cliente (entrada oculta)' -AsSecureString
     $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try { $token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
     if ($token -notmatch '^[a-fA-F0-9]{64}$') { throw 'O token deve ser o token de 64 caracteres gerado no cadastro da empresa cliente.' }
     $token = $token.ToLowerInvariant()
-    # Confirma o destino sem desativar validacao TLS e sem seguir redirecionamentos com o token.
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $request = [Net.HttpWebRequest]::Create($server + '/api/agent/check')
-    $request.Method = 'GET'; $request.AllowAutoRedirect = $false; $request.Timeout = 15000
-    $request.Headers['Authorization'] = 'Bearer ' + $token
-    $response = $request.GetResponse(); try { if ([int]$response.StatusCode -ne 200) { throw 'Servidor recusou o token.' } } finally { $response.Dispose() }
-
-    $installClient = ((Read-Host 'Criar aplicativo de chamados sem login? ENTER para SIM, N para somente monitoramento') -ine 'N')
+    # Nao segue redirecionamentos com o token e mantem a validacao TLS.
+    $checked = Invoke-ServitecAgentRequest -Server $server -Path '/api/agent/check' -Token $token
+    if ($checked.ok -ne $true -or $checked.protocolVersion -ne 1) { throw 'A API do agente respondeu em formato incompativel. Atualize o servidor.' }
+    $installClient = -not $MonitorOnly
     if ($installClient) {
         $clientBinary = Join-Path $PSScriptRoot 'ServitecClient.exe'
         $clientHash = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'ServitecClient.sha256') -Raw).Trim()
@@ -72,23 +87,13 @@ try {
     }
     $support = $null
     if ($installClient) {
-        $enrollRequest = [Net.HttpWebRequest]::Create($server + '/api/agent/support/enroll')
-        $enrollRequest.Method = 'POST'; $enrollRequest.AllowAutoRedirect = $false; $enrollRequest.Timeout = 15000
-        $enrollRequest.ContentType = 'application/json'; $enrollRequest.Headers['Authorization'] = 'Bearer ' + $token
-        $enrollBytes = [Text.Encoding]::UTF8.GetBytes((@{machineId=$machineId;name=$env:COMPUTERNAME} | ConvertTo-Json -Compress))
-        $enrollRequest.ContentLength = $enrollBytes.Length
-        $stream = $enrollRequest.GetRequestStream(); try { $stream.Write($enrollBytes,0,$enrollBytes.Length) } finally { $stream.Dispose() }
-        $enrollResponse = $enrollRequest.GetResponse()
-        try {
-            $reader = New-Object IO.StreamReader($enrollResponse.GetResponseStream())
-            try { $support = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
-            if ([string]$support.supportToken -notmatch '^[a-f0-9]{64}$') { throw 'Autorizacao do aplicativo invalida.' }
-        } finally { $enrollResponse.Dispose() }
+        $support = Invoke-ServitecAgentRequest -Server $server -Path '/api/agent/support/enroll' -Method POST -Token $token -Body @{machineId=$machineId;name=$env:COMPUTERNAME}
+        if ([string]$support.supportToken -notmatch '^[a-f0-9]{64}$') { throw 'Autorizacao do aplicativo invalida.' }
     }
     if ($service) { Stop-Service -Name 'ServitecAgent'; $service.WaitForStatus('Stopped',[TimeSpan]::FromSeconds(45)) }
     Add-Type -AssemblyName System.Security
     $encrypted = [Security.Cryptography.ProtectedData]::Protect([Text.Encoding]::UTF8.GetBytes($token),$null,[Security.Cryptography.DataProtectionScope]::LocalMachine)
-    $config = @{serverUrl=$server;protectedToken=[Convert]::ToBase64String($encrypted);machineId=$machineId;intervalSeconds=30;allowInsecureLan=$allowLan}
+    $config = @{serverUrl=$server;protectedToken=[Convert]::ToBase64String($encrypted);machineId=$machineId;intervalSeconds=30;allowInsecureLan=$allowLan;allowInsecureHttp=$allowPublicHttp}
     $config | ConvertTo-Json | Set-Content -LiteralPath $configFile -Encoding UTF8
     $token = $null
     $queue = Join-Path $data 'queue'
@@ -125,7 +130,7 @@ try {
         Copy-Item -LiteralPath $clientBinary -Destination (Join-Path $clientTarget 'ServitecClient.exe') -Force
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ServitecClient.exe.config') -Destination $clientTarget -Force
         $protectedSupport = [Security.Cryptography.ProtectedData]::Protect([Text.Encoding]::UTF8.GetBytes([string]$support.supportToken),$null,[Security.Cryptography.DataProtectionScope]::LocalMachine)
-        @{serverUrl=$server;companyName=[string]$support.companyName;protectedSupportToken=[Convert]::ToBase64String($protectedSupport);allowInsecureLan=$allowLan} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $clientTarget 'portal.json') -Encoding UTF8
+        @{serverUrl=$server;companyName=[string]$support.companyName;protectedSupportToken=[Convert]::ToBase64String($protectedSupport);allowInsecureLan=$allowLan;allowInsecureHttp=$allowPublicHttp} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $clientTarget 'portal.json') -Encoding UTF8
         $shell = New-Object -ComObject WScript.Shell
         $menu = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'SERVITEC VSA'
         New-Item -ItemType Directory -Path $menu -Force | Out-Null

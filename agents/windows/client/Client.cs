@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
-[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
 [assembly: AssemblyTitle("SERVITEC VSA - Abrir chamado")]
 namespace Servitec.Client {
     internal static class Program {
@@ -21,7 +21,8 @@ namespace Servitec.Client {
                 if (new FileInfo(configFile).Length > 8192) throw new InvalidDataException();
                 var config = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(File.ReadAllText(configFile));
                 bool allowLan = config.ContainsKey("allowInsecureLan") && config["allowInsecureLan"] is bool && (bool)config["allowInsecureLan"];
-                Uri origin = AgentPolicy.ServerUri(Convert.ToString(config["serverUrl"]), allowLan);
+                bool allowPublicHttp = config.ContainsKey("allowInsecureHttp") && config["allowInsecureHttp"] is bool && (bool)config["allowInsecureHttp"];
+                Uri origin = AgentPolicy.ServerUri(Convert.ToString(config["serverUrl"]), allowLan, allowPublicHttp);
                 string token = Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(Convert.ToString(config["protectedSupportToken"])), null, DataProtectionScope.LocalMachine));
                 if (!System.Text.RegularExpressions.Regex.IsMatch(token, "^[a-f0-9]{64}$")) throw new InvalidDataException();
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
@@ -58,7 +59,7 @@ namespace Servitec.Client {
                 try {
                     var payload = new { requestId = requestId, requester = requester.Text.Trim(), email = email.Text.Trim(), title = title.Text.Trim(), description = description.Text.Trim() };
                     using (var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseProxy = true })) {
-                        client.Timeout = TimeSpan.FromSeconds(30); client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                        client.Timeout = TimeSpan.FromSeconds(45); client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                         using (var content = new StringContent(new JavaScriptSerializer().Serialize(payload), Encoding.UTF8, "application/json"))
                         using (var response = await client.PostAsync(new Uri(origin, "/api/agent/support/tickets"), content)) {
                             string responseText = await response.Content.ReadAsStringAsync();

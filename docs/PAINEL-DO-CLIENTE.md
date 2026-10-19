@@ -65,7 +65,7 @@ O navegador pode utilizar HTTPS na porta 443 de cada domínio enquanto os destin
 
 ## Contas e sessões
 
-O login do Painel do Cliente utiliza somente e-mail e senha, inclusive para contas com segundo fator configurado anteriormente. O painel não oferece configuração de autenticador. O segundo fator das contas internas permanece disponível e é exigido quando ativado.
+O login do Painel do Cliente utiliza somente e-mail e senha, inclusive para contas com segundo fator configurado anteriormente. O painel não oferece configuração de autenticador. O login interno também utiliza somente e-mail e senha. A configuração de segundo fator existente é preservada para as operações sensíveis que ainda a exigem.
 
 - Crie e gerencie clientes em **Acessos de clientes**, na entrada interna. Contas de clientes não são contas de operadores.
 - O painel só autentica contas de clientes; o sistema interno só autentica contas internas. Não há cadastro inicial de administrador pela porta do painel.

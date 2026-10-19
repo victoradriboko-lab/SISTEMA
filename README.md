@@ -378,3 +378,7 @@ Para atualizar o servidor Windows:
 4. Inicie o sistema pelo mecanismo habitual e use Ctrl+F5 no navegador. Confira clientes, usuários e equipamentos existentes.
 
 Não execute `git clean -fdx`, não apague a pasta de dados e não copie um banco de desenvolvimento sobre o banco do servidor. Uma restauração de backup é uma operação separada e substitui os dados pelo estado do backup; não faz parte da atualização normal.
+
+### Login com e-mail e senha
+
+As entradas interna e do Painel do Cliente utilizam somente e-mail e senha, inclusive para contas com autenticador configurado anteriormente. Nenhum usuário, senha ou configuração de MFA é apagado pela atualização. O segundo fator permanece nas operações sensíveis que o exigem, como a consulta ao cofre.

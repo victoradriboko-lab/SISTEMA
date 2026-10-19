@@ -11,7 +11,7 @@ No topo direito, abaixo do nome do cliente, a chave **Claro / Escuro** alterna a
 | Variável | Padrão | Uso |
 | --- | --- | --- |
 | `PORT` | `3000` | Porta do sistema interno; mantém o valor configurado na instalação. |
-| `HOST` | `127.0.0.1` | Interface de rede do sistema interno. |
+| `HOST` | `0.0.0.0` | Interface de rede do sistema interno. |
 | `CLIENT_PORT` | `3001` | Porta do Painel do Cliente; deve ser diferente da interna. |
 | `CLIENT_HOST` | Valor de `HOST` | Interface do painel. Permite restringir ao proxy local. |
 | `CLIENT_PUBLIC_URL` | Endereço HTTP sugerido com a porta do painel | URL pública mostrada no cadastro interno de acessos. Use a URL HTTPS real quando houver proxy. Sem caminho, credenciais, consulta ou fragmento. |

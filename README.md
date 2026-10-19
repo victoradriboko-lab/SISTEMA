@@ -16,7 +16,7 @@ npm test
 npm start
 ```
 
-O servidor escuta em 127.0.0.1:3000. A primeira abertura solicita cadastro do administrador (senha mínima de 12 caracteres). Faça esse cadastro antes de disponibilizar a aplicação a outras pessoas. Não existe usuário padrão. PORT e HOST permitem configurar a escuta. O Painel do Cliente inicia separadamente em 127.0.0.1:3001. Para acesso pela rede, configure HOST e, para publicação externa, coloque atrás de proxy HTTPS e defina COOKIE_SECURE=1. Dados persistem em data/sistema.db; DATA_DIR permite outro diretório. Faça backups consistentes com SQLite; não copie apenas o arquivo principal durante gravações em modo WAL.
+O servidor escuta em 0.0.0.0:3000 por padrão, permitindo acesso local e pela rede. A primeira abertura solicita cadastro do administrador (senha mínima de 12 caracteres). Faça esse cadastro antes de disponibilizar a aplicação a outras pessoas. Não existe usuário padrão. PORT e HOST permitem configurar a escuta. O Painel do Cliente inicia separadamente em 0.0.0.0:3001 e herda HOST, salvo quando CLIENT_HOST é definido. Esse padrão é o mesmo em instalações locais e cloud. Para restringir o acesso ao próprio servidor, defina HOST=127.0.0.1. Para publicação externa, coloque atrás de proxy HTTPS e defina COOKIE_SECURE=1. Dados persistem em data/sistema.db; DATA_DIR permite outro diretório. Faça backups consistentes com SQLite; não copie apenas o arquivo principal durante gravações em modo WAL.
 
 ## Implementado
 

@@ -20,7 +20,7 @@ const root=fileURLToPath(new URL('.',import.meta.url));
 const readPort=(name,fallback)=>{const value=process.env[name]??String(fallback);if(!/^\d+$/.test(value)||Number(value)>65535)throw Error(`${name} deve ser uma porta entre 0 e 65535`);return Number(value);};
 const internalPort=readPort('PORT',3000),clientPort=readPort('CLIENT_PORT',3001);
 if(internalPort!==0&&internalPort===clientPort)throw Error('CLIENT_PORT deve ser diferente de PORT');
-const internalHost=process.env.HOST||'127.0.0.1',clientHost=process.env.CLIENT_HOST||internalHost;
+const internalHost=process.env.HOST||'0.0.0.0',clientHost=process.env.CLIENT_HOST||internalHost;
 let publicClientURL=null;
 if(process.env.CLIENT_PUBLIC_URL){const url=new URL(process.env.CLIENT_PUBLIC_URL);if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.pathname!=='/'||url.search||url.hash)throw Error('CLIENT_PUBLIC_URL deve ser uma URL HTTP(S) sem caminho ou credenciais');publicClientURL=url.origin;}
 const isClient=user=>user.account_type==='client'||user.role==='client_viewer';

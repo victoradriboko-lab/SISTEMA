@@ -14,7 +14,7 @@ O instalador alternativo `ServitecAgentSetupHttp.exe` usa `http://vsuarez.ddns.n
 
 Para configuração avançada, execute `instalar-agente.ps1 -ServerUrl https://outro-servidor.example`. Acrescente `-MonitorOnly` para não instalar o aplicativo de chamados ou `-UseHttp` para autorizar HTTP explicitamente. Configurações antigas de HTTP em LAN continuam compatíveis.
 
-O instalador verifica a API antes de solicitar o token. O limite de conexão é de 45 segundos, com até duas tentativas para falhas transitórias e mensagens para DNS, timeout, token inválido, porta incorreta e TLS. Certificados continuam sendo validados. Redirecionamentos não recebem o token.
+Após validar o formato da URL, o instalador solicita o token e somente depois verifica a conexão com a API. O limite de conexão é de 45 segundos, com até duas tentativas para falhas transitórias e mensagens para DNS, timeout, token inválido, porta incorreta e TLS. Certificados continuam sendo validados. Redirecionamentos não recebem o token.
 
 HTTP/3000 e HTTPS/3000 precisam chegar ao sistema interno na porta 3000, por encaminhamento ou proxy reverso. Não use a porta 3001 do portal. A aplicação não altera NAT, roteador, DNS, certificado ou firewall.
 

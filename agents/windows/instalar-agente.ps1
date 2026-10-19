@@ -36,16 +36,18 @@ try {
         if ((Read-Host 'HTTP nao criptografa os dados. Confirma uso somente na rede local? Digite SIM') -cne 'SIM') { throw 'Use um endereco HTTPS para continuar.' }
         $allowLan = $true
     }
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Write-Host 'Verificando a API do servidor antes de solicitar o token...'
-    $state = Invoke-ServitecAgentRequest -Server $server -Path '/api/state'
-    if ($state.portal -eq 'client') { throw 'O dominio aponta para o Painel do Cliente (porta 3001). Configure o proxy HTTPS para o sistema interno na porta 3000.' }
-    if ($null -eq $state.initialized) { throw 'A resposta nao identifica a API do sistema interno. Confira o destino do proxy HTTPS.' }
+    Write-Host 'Informe o token abaixo e pressione Enter. A entrada fica oculta por seguranca.'
     $secure = Read-Host 'Cole o token da empresa cliente (entrada oculta)' -AsSecureString
     $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try { $token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
+    $token = $token.Trim()
     if ($token -notmatch '^[a-fA-F0-9]{64}$') { throw 'O token deve ser o token de 64 caracteres gerado no cadastro da empresa cliente.' }
     $token = $token.ToLowerInvariant()
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Write-Host 'Token informado. Verificando a conexao com a API do servidor...'
+    $state = Invoke-ServitecAgentRequest -Server $server -Path '/api/state'
+    if ($state.portal -eq 'client') { throw 'O dominio aponta para o Painel do Cliente (porta 3001). Configure o proxy HTTPS para o sistema interno na porta 3000.' }
+    if ($null -eq $state.initialized) { throw 'A resposta nao identifica a API do sistema interno. Confira o destino do proxy HTTPS.' }
     # Nao segue redirecionamentos com o token e mantem a validacao TLS.
     $checked = Invoke-ServitecAgentRequest -Server $server -Path '/api/agent/check' -Token $token
     if ($checked.ok -ne $true -or $checked.protocolVersion -ne 1) { throw 'A API do agente respondeu em formato incompativel. Atualize o servidor.' }

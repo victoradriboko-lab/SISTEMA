@@ -6,10 +6,11 @@ export function createOperations({db,body,json,config,desk,clock=()=>Date.now(),
  CREATE TABLE IF NOT EXISTS preventive_runs(plan_id INTEGER,due TEXT,ticket_id INTEGER,UNIQUE(plan_id,due));
  CREATE TABLE IF NOT EXISTS remote_requests(id INTEGER PRIMARY KEY,asset_id INTEGER,actor_id INTEGER,reason TEXT,consent TEXT,remote_id TEXT,created TEXT DEFAULT CURRENT_TIMESTAMP);
  CREATE TABLE IF NOT EXISTS service_automation(id INTEGER PRIMARY KEY CHECK(id=1),enabled INTEGER NOT NULL DEFAULT 1);INSERT OR IGNORE INTO service_automation(id) VALUES(1);`);
+ let companyAlerts=()=>({});
  function tick(){if(!db.prepare('SELECT enabled FROM service_automation WHERE id=1').get().enabled)return;const now=clock();db.exec('BEGIN IMMEDIATE');try{
-  for(const asset of db.prepare('SELECT id,last_seen,metrics FROM assets WHERE last_seen IS NOT NULL').all()){
-   let m={};try{m=JSON.parse(asset.metrics||'{}');}catch{}const offline=now-Date.parse(asset.last_seen)>300000;
-   const conditions={offline,cpu:!offline&&Number(m.cpuPercent??m.cpu?.usagePercent)>90,memory:!offline&&Number(m.memory?.usedPercent??m.memoryUsedPercent)>90,disk:!offline&&Array.isArray(m.disks)&&m.disks.some(d=>Number(d.usedPercent)>90)};
+  for(const asset of db.prepare('SELECT id,client_id,last_seen,metrics FROM assets WHERE last_seen IS NOT NULL').all()){
+   let m={};try{m=JSON.parse(asset.metrics||'{}');}catch{}const limits=companyAlerts(asset.client_id),offline=now-Date.parse(asset.last_seen)>(limits.offlineMinutes??5)*60000;
+   const conditions={offline,cpu:!offline&&Number(m.cpuPercent??m.cpu?.usagePercent)>(limits.cpu??90),memory:!offline&&Number(m.memory?.usedPercent??m.memoryUsedPercent)>(limits.memory??90),disk:!offline&&Array.isArray(m.disks)&&m.disks.some(d=>Number(d.usedPercent)>(limits.disk??90))};
    for(const [kind,bad] of Object.entries(conditions)){const active=db.prepare('SELECT * FROM service_alerts WHERE asset_id=? AND kind=? AND resolved IS NULL').get(asset.id,kind);if(bad){if(active)db.prepare('UPDATE service_alerts SET last_seen=? WHERE id=?').run(now,active.id);else db.prepare('INSERT INTO service_alerts(asset_id,kind,since,last_seen) VALUES(?,?,?,?)').run(asset.id,kind,now,now);}else if(active)db.prepare('UPDATE service_alerts SET resolved=? WHERE id=?').run(now,active.id);}
   }
   const today=new Date(now).toISOString().slice(0,10);
@@ -41,5 +42,5 @@ export function createOperations({db,body,json,config,desk,clock=()=>Date.now(),
   }
   fail('Rota não encontrada',404);
  }
- return {handle,tick};
+ return {setCompanyAlerts:fn=>{companyAlerts=fn;},handle,tick};
 }

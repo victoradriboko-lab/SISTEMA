@@ -15,7 +15,7 @@ using System.Threading;
 using System.Web.Script.Serialization;
 using Microsoft.Win32;
 
-[assembly: AssemblyVersion("1.2.3.0")]
+[assembly: AssemblyVersion("1.2.4.0")]
 namespace Servitec {
     internal sealed class AgentHttpException : Exception { public readonly int Status; public AgentHttpException(int status) { Status = status; } }
     public sealed class AgentService : ServiceBase {

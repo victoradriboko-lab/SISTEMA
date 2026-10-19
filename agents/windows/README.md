@@ -1,4 +1,4 @@
-# Agente Windows e Windows Server — 1.2.3
+# Agente Windows e Windows Server — 1.2.4
 
 Agente de inventário e telemetria para Windows 10/11 ou Windows Server 2016+, com .NET Framework 4.6.2+. Não executa comandos remotos nem coleta senhas ou arquivos pessoais. O aplicativo de abrir chamados usa autorização da empresa, sem login do usuário.
 
@@ -53,3 +53,12 @@ O instalador tenta parar normalmente o serviço, inclusive aguardando estados de
 O agente interrompe consultas de inventário ao receber a solicitação de parada e informa prazo ao controlador de serviços. A fila de coletas pendentes é mantida quando servidor e token não mudam. Ao mudar servidor/token, a fila anterior é arquivada localmente em `C:\ProgramData\ServitecAgent\queue-preservada-*` e não é reenviada no novo contexto. Identidade da máquina, dados da plataforma e histórico são preservados.
 
 Validação de cenários de serviço e fila: `tests/ServiceUpdateTests.ps1`. O teste usa serviços/processos simulados e não encerra processos reais.
+
+
+## Aplicativo de atendimento — versão 1.2.4
+
+O aplicativo Abrir chamado usa a identidade Servitec T.I., com cabeçalho preto, marca em roxo, área clara, campos brancos e botão verde. O formulário e a autorização da empresa continuam os mesmos. O instalador continua preservando a identificação da máquina e a fila local.
+
+Para receber a nova interface, atualize o servidor, baixe novamente o instalador HTTP ou HTTPS apropriado e execute-o como administrador na máquina. Feche o aplicativo Abrir chamado antes de reinstalar. Os atalhos existentes continuam funcionando; seu nome no Windows é mantido para evitar atalhos duplicados.
+
+Validação: compilação .NET Framework 4.6.2, hashes do pacote, instaladores HTTP/HTTPS e testes da política do agente. A renderização nativa do Windows deve ser conferida na máquina após a atualização.

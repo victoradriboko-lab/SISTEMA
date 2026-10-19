@@ -1,5 +1,7 @@
+import {ensureAssetArchive,assetArchive} from './asset-archive.mjs';
 const fail=(m,s=400)=>{throw Object.assign(Error(m),{status:s});};
 export function createOperations({db,body,json,config,desk,clock=()=>Date.now(),startScheduler=true}){
+ ensureAssetArchive(db);
  db.exec(`CREATE TABLE IF NOT EXISTS service_alerts(id INTEGER PRIMARY KEY,asset_id INTEGER,kind TEXT,since INTEGER,last_seen INTEGER,resolved INTEGER,ack_by INTEGER);
  CREATE UNIQUE INDEX IF NOT EXISTS active_service_alert ON service_alerts(asset_id,kind) WHERE resolved IS NULL;
  CREATE TABLE IF NOT EXISTS preventive_plans(id INTEGER PRIMARY KEY,client_id INTEGER,title TEXT,interval_days INTEGER,next_date TEXT,active INTEGER DEFAULT 1);
@@ -8,7 +10,7 @@ export function createOperations({db,body,json,config,desk,clock=()=>Date.now(),
  CREATE TABLE IF NOT EXISTS service_automation(id INTEGER PRIMARY KEY CHECK(id=1),enabled INTEGER NOT NULL DEFAULT 1);INSERT OR IGNORE INTO service_automation(id) VALUES(1);`);
  let companyAlerts=()=>({});
  function tick(){if(!db.prepare('SELECT enabled FROM service_automation WHERE id=1').get().enabled)return;const now=clock();db.exec('BEGIN IMMEDIATE');try{
-  for(const asset of db.prepare('SELECT id,client_id,last_seen,metrics FROM assets WHERE last_seen IS NOT NULL').all()){
+  for(const asset of db.prepare('SELECT id,client_id,last_seen,metrics FROM assets WHERE last_seen IS NOT NULL AND NOT EXISTS (SELECT 1 FROM asset_archive ar WHERE ar.asset_id=assets.id)').all()){
    let m={};try{m=JSON.parse(asset.metrics||'{}');}catch{}const limits=companyAlerts(asset.client_id),offline=now-Date.parse(asset.last_seen)>(limits.offlineMinutes??5)*60000;
    const conditions={offline,cpu:!offline&&Number(m.cpuPercent??m.cpu?.usagePercent)>(limits.cpu??90),memory:!offline&&Number(m.memory?.usedPercent??m.memoryUsedPercent)>(limits.memory??90),disk:!offline&&Array.isArray(m.disks)&&m.disks.some(d=>Number(d.usedPercent)>(limits.disk??90))};
    for(const [kind,bad] of Object.entries(conditions)){const active=db.prepare('SELECT * FROM service_alerts WHERE asset_id=? AND kind=? AND resolved IS NULL').get(asset.id,kind);if(bad){if(active)db.prepare('UPDATE service_alerts SET last_seen=? WHERE id=?').run(now,active.id);else db.prepare('INSERT INTO service_alerts(asset_id,kind,since,last_seen) VALUES(?,?,?,?)').run(asset.id,kind,now,now);}else if(active)db.prepare('UPDATE service_alerts SET resolved=? WHERE id=?').run(now,active.id);}
@@ -26,7 +28,7 @@ export function createOperations({db,body,json,config,desk,clock=()=>Date.now(),
  async function handle(req,res,path,user){if(!path.startsWith('/api/operations/'))return false;const part=path.slice(16).split('/'),method=req.method,p=part[0]==='automation'?'system.manage':part[0]==='remote'?'remote.use':part[0]==='alerts'?'monitor.read':method==='GET'?'tickets.read':'contracts.manage';if(!config.allowed(user,p))fail('Sem permissão',403);
   if(part[0]==='automation'){if(method==='GET'){json(res,200,db.prepare('SELECT enabled FROM service_automation WHERE id=1').get());return true;}if(method==='PUT'){const b=await body(req);if(typeof b.enabled!=='boolean')fail('Opção inválida');db.prepare('UPDATE service_automation SET enabled=? WHERE id=1').run(b.enabled?1:0);config.audit(user,'operations.automation',b.enabled?'Automações ativadas':'Automações pausadas');json(res,200,{ok:true});return true;}fail('Rota inválida',404);}
   if(part[0]==='alerts'&&method==='GET'){
-   const rows=db.prepare("SELECT s.*,a.name,a.client_id,c.name AS client_name FROM service_alerts s JOIN assets a ON a.id=s.asset_id LEFT JOIN clients c ON c.id=a.client_id WHERE s.resolved IS NOT NULL OR s.kind='offline' OR s.last_seen-s.since>=120000 ORDER BY s.id DESC LIMIT 200").all();
+   const rows=db.prepare("SELECT s.*,a.name,a.client_id,c.name AS client_name FROM service_alerts s JOIN assets a ON a.id=s.asset_id LEFT JOIN clients c ON c.id=a.client_id WHERE NOT EXISTS (SELECT 1 FROM asset_archive ar WHERE ar.asset_id=a.id) AND (s.resolved IS NOT NULL OR s.kind='offline' OR s.last_seen-s.since>=120000) ORDER BY s.id DESC LIMIT 200").all();
    const overdue=config.allowed(user,'tickets.read')?db.prepare("SELECT t.id AS ticket_id,t.title AS name,t.client_id,c.name AS client_name,s.response_due,s.resolution_due,s.responded_at FROM ticket_sla s JOIN tickets t ON t.id=s.ticket_id LEFT JOIN clients c ON c.id=t.client_id WHERE t.status<>'Resolvido' AND (CASE WHEN s.responded_at IS NULL THEN s.response_due ELSE s.resolution_due END)<?").all(new Date(clock()).toISOString()):[];
    json(res,200,[...overdue.map(t=>({...t,kind:'sla',since:Date.parse(t.responded_at?t.resolution_due:t.response_due),ack_by:1})),...rows]);return true;
   }

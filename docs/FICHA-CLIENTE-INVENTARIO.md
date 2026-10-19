@@ -85,3 +85,15 @@ A navegação do portal agora inclui **Computadores da empresa**. A listagem é 
 A identidade Servitec T.I. usa o logo oficial em menu, telas de entrada, cabeçalho do portal e rodapés. A imagem padrão vem de `https://www.servitecbrasil.com.br/logo.svg`; portanto depende de acesso ao site no navegador. Se não carregar, aparece o nome em texto. Um logotipo já salvo em Configurações → Dados da empresa tem prioridade e é servido localmente, sem substituir a configuração existente. Nenhum dado ou token é alterado por esta atualização.
 
 Validação: testes de isolamento entre empresas, filtros, paginação, recusa de alterações e revogação de sessão após troca do vínculo, além de navegação em computador e celular. O teste de navegador simula indisponibilidade do logo remoto; não confirma o download do SVG em produção.
+
+## Excluir equipamentos sem apagar o histórico
+
+Em **Inventário → Equipamentos**, marque um ou mais equipamentos e clique em **Excluir selecionados**. Após confirmar, os equipamentos saem da categoria Ativos e passam para **Excluídos**, sempre como offline e somente para consulta. Na categoria Excluídos, selecione registros e use **Restaurar selecionados** para recolocá-los em Ativos. É possível operar até 100 registros por vez.
+
+O arquivamento guarda data e operador na tabela aditiva `asset_archive`. Não altera o cadastro original, token, vínculo com a empresa, identificação da máquina, métricas anteriores, documentos ou tickets. As comunicações posteriores do agente são ignoradas enquanto o equipamento estiver excluído; o vínculo permanece para impedir novo cadastro automático da mesma instalação. Ao restaurar, a coleta pode voltar a atualizar o cadastro original.
+
+Equipamentos excluídos ficam fora do monitoramento ativo, do painel principal e da listagem do portal do cliente. Não geram novos alertas automáticos. A ficha interna continua disponível com indicação de equipamento excluído, offline e com dados históricos. Edição nessa ficha e atualização em massa exigem restaurar primeiro. Histórico e contratos existentes são preservados.
+
+Validação: 47 testes passaram, incluindo migração aditiva repetida, preservação integral dos registros, isolamento do portal, recusa de lotes inválidos sem alterações parciais, coleta ignorada sem criar duplicados, persistência após reinício e restauração. O fluxo de seleção, confirmação/cancelamento, consulta e restauração foi verificado no navegador, incluindo tela móvel.
+
+Atualização do servidor: faça uma cópia consistente do banco, preserve `DATA_DIR` e a chave de segurança existente, atualize somente o código e reinicie o processo. Nenhum registro anterior é arquivado automaticamente; isso ocorre apenas por seleção explícita na interface. Esta mudança não exige reinstalar o agente.

@@ -1,7 +1,9 @@
+import {ensureAssetArchive,assetArchive} from './asset-archive.mjs';
 import {newCompanyToken,compactCompanyTokens} from './company-tokens.mjs';
 import {randomBytes} from 'node:crypto';
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 export function createClients({db,body,json,config,check}){
+ ensureAssetArchive(db);
  db.exec(`CREATE TABLE IF NOT EXISTS clients(id INTEGER PRIMARY KEY,name TEXT NOT NULL,token TEXT UNIQUE NOT NULL);
  CREATE TABLE IF NOT EXISTS client_machines(client_id INTEGER NOT NULL,machine_id TEXT NOT NULL,asset_id INTEGER NOT NULL,PRIMARY KEY(client_id,machine_id));`);
  const replacedTokens=compactCompanyTokens(db);if(replacedTokens)config.audit(null,'clients.tokens.compact',`${replacedTokens} token(s) de empresa substituído(s) por solicitação do proprietário`);
@@ -9,7 +11,7 @@ export function createClients({db,body,json,config,check}){
  if(!columns.includes('client_id'))db.exec('ALTER TABLE assets ADD COLUMN client_id INTEGER');
  const clean=v=>typeof v==='string'?v.trim().slice(0,500):'';
  const getClient=token=>db.prepare('SELECT id,name FROM clients WHERE token=?').get(token);
- const findDuplicate=(clientId,name,except=0)=>db.prepare('SELECT id FROM assets WHERE client_id=? AND lower(trim(name))=lower(trim(?)) AND id<>? ORDER BY id LIMIT 1').get(clientId,name,except);
+ const findDuplicate=(clientId,name,except=0)=>db.prepare('SELECT id FROM assets WHERE client_id=? AND lower(trim(name))=lower(trim(?)) AND id<>? AND NOT EXISTS (SELECT 1 FROM asset_archive ar WHERE ar.asset_id=assets.id) ORDER BY id LIMIT 1').get(clientId,name,except);
  function enroll(client,sample){
   if(sample.legacy)fail('Token da empresa requer o agente Windows com identificação da máquina');
   let link=db.prepare('SELECT asset_id FROM client_machines WHERE client_id=? AND machine_id=?').get(client.id,sample.machineId);
@@ -41,13 +43,13 @@ export function createClients({db,body,json,config,check}){
   if(path==='/api/assets'&&req.method==='GET'){
    const url=new URL(req.url,'http://localhost'),filter=url.searchParams.get('clientId');
    if(filter!==null&&!/^\d+$/.test(filter))fail('Filtro de cliente inválido');
-   const rows=db.prepare(`SELECT a.id,a.code,a.name,a.owner,a.os,a.last_seen,a.metrics,a.agent_info,a.last_metrics_at,a.last_inventory_at,a.client_id,c.name AS client_name FROM assets a LEFT JOIN clients c ON c.id=a.client_id ${filter!==null?'WHERE coalesce(a.client_id,0)=?':''} ORDER BY c.name,a.name,a.id`).all(...(filter!==null?[Number(filter)]:[]));
+   const rows=db.prepare(`SELECT a.id,a.code,a.name,a.owner,a.os,a.last_seen,a.metrics,a.agent_info,a.last_metrics_at,a.last_inventory_at,a.client_id,c.name AS client_name FROM assets a LEFT JOIN clients c ON c.id=a.client_id WHERE NOT EXISTS (SELECT 1 FROM asset_archive ar WHERE ar.asset_id=a.id) ${filter!==null?'AND coalesce(a.client_id,0)=?':''} ORDER BY c.name,a.name,a.id`).all(...(filter!==null?[Number(filter)]:[]));
    json(res,200,rows.map(a=>({...a,duplicate_of:a.client_id?(findDuplicate(a.client_id,a.name,a.id)?.id??null):null,...(!config.allowed(user,'monitor.read')?{metrics:undefined,agent_info:undefined,last_metrics_at:undefined,last_inventory_at:undefined}:{})})));return true;
   }
   if(/^\/api\/assets\/\d+\/client$/.test(path)&&req.method==='PATCH'){
    const id=Number(path.split('/')[3]),b=await body(req);
    if(!Number.isSafeInteger(b.clientId)||!db.prepare('SELECT id FROM clients WHERE id=?').get(b.clientId))fail('Selecione uma empresa válida');
-   if(!db.prepare('SELECT id FROM assets WHERE id=?').get(id))fail('Equipamento não encontrado',404);
+   if(!db.prepare('SELECT id FROM assets WHERE id=?').get(id))fail('Equipamento não encontrado',404);if(assetArchive(db,id))fail('Restaure o equipamento antes de alterar o cliente',409);
    if(db.prepare('SELECT asset_id FROM client_machines WHERE asset_id=?').get(id))fail('Equipamento conectado já pertence à empresa. Altere o token no agente para cadastrar em outra empresa.',409);
    db.prepare('UPDATE assets SET client_id=? WHERE id=?').run(b.clientId,id);config.audit(user,'assets.client',`Equipamento #${id} vinculado à empresa #${b.clientId}`);json(res,200,{ok:true});return true;
   }
@@ -55,6 +57,7 @@ export function createClients({db,body,json,config,check}){
    const clientId=Number(path.split('/')[3]),b=await body(req);
    if(!Number.isSafeInteger(b.keepId)||!Number.isSafeInteger(b.removeId)||b.keepId===b.removeId)fail('Selecione os dois cadastros e qual manter');
    const keep=db.prepare('SELECT * FROM assets WHERE id=? AND client_id=?').get(b.keepId,clientId),remove=db.prepare('SELECT * FROM assets WHERE id=? AND client_id=?').get(b.removeId,clientId);
+   if(keep&&assetArchive(db,keep.id)||remove&&assetArchive(db,remove.id))fail('Equipamentos excluídos não podem ser mesclados',409);
    if(!keep||!remove||keep.name.trim().toLowerCase()!==remove.name.trim().toLowerCase())fail('Os cadastros precisam ter o mesmo nome e pertencer à mesma empresa',409);
    db.exec('BEGIN IMMEDIATE');try{
     db.prepare('INSERT OR IGNORE INTO telemetry(asset_id,sample_id,observed_at,received_at,metrics) SELECT ?,sample_id,observed_at,received_at,metrics FROM telemetry WHERE asset_id=?').run(keep.id,remove.id);

@@ -1,3 +1,4 @@
+import {ensureAssetArchive,assetArchive} from './asset-archive.mjs';
 import {extendInventory} from './telemetry-inventory.mjs';
 import {randomUUID} from 'node:crypto';
 import {readFileSync} from 'node:fs';
@@ -45,6 +46,7 @@ export function normalizeHeartbeat(payload,now=Date.now()){
 }
 
 export function createTelemetry({db,body,json,config,root,clients}){
+ ensureAssetArchive(db);
   const columns=db.prepare('PRAGMA table_info(assets)').all().map(c=>c.name);
   for(const name of ['agent_info','inventory','machine_id','last_metrics_at','last_inventory_at'])if(!columns.includes(name))db.exec(`ALTER TABLE assets ADD COLUMN ${name} TEXT`);
   db.exec('CREATE TABLE IF NOT EXISTS telemetry(id INTEGER PRIMARY KEY,asset_id INTEGER NOT NULL,sample_id TEXT NOT NULL,observed_at INTEGER NOT NULL,received_at INTEGER NOT NULL,metrics TEXT NOT NULL,UNIQUE(asset_id,sample_id)); CREATE INDEX IF NOT EXISTS telemetry_asset_time ON telemetry(asset_id,observed_at DESC)');
@@ -56,10 +58,11 @@ export function createTelemetry({db,body,json,config,root,clients}){
     let client=clients?.getClient(token);
     if(!asset&&!client){json(res,401,{error:'Token inválido'});return true;}
     if(path==='/api/agent/check'&&client){json(res,200,{ok:true,protocolVersion:1,client});return true;}
-    if(path==='/api/agent/check'){json(res,200,{ok:true,protocolVersion:1,asset:{id:asset.id,name:asset.name}});return true;}
+    if(path==='/api/agent/check'){json(res,200,{ok:true,protocolVersion:1,archived:!!assetArchive(db,asset.id),asset:{id:asset.id,name:asset.name}});return true;}
     try {
     const sample=normalizeHeartbeat(await body(req));
     if(client){client=clients.getClient(token);if(!client)fail('Token revogado',401);asset=clients.enroll(client,sample);if(!asset){json(res,200,{ok:true,requestInventory:true});return true;}}
+    if(assetArchive(db,asset.id)){json(res,200,{ok:true,archived:true});return true;}
     if(!client&&asset.machine_id&&(sample.legacy||asset.machine_id!==sample.machineId))fail('Token vinculado a outra instalação. Renove o token do equipamento para reinstalar.',409);
     // Revalida o token depois da leitura do corpo, caso tenha sido renovado.
     const current=client?asset:db.prepare('SELECT id,name,machine_id,agent_info,last_metrics_at,last_inventory_at,os,inventory IS NOT NULL AS has_inventory FROM assets WHERE id=? AND token=?').get(asset.id,token);if(!current)fail('Token revogado',401);
@@ -93,7 +96,7 @@ export function createTelemetry({db,body,json,config,root,clients}){
       if(!config.allowed(user,'monitor.read'))fail('Sem permissão para consultar monitoramento',403);
       const id=Number(path.split('/')[3]),asset=db.prepare('SELECT id,name,os,last_seen,metrics,inventory,agent_info,last_metrics_at,last_inventory_at FROM assets WHERE id=?').get(id);if(!asset)fail('Equipamento não encontrado',404);
       const history=db.prepare('SELECT observed_at,metrics FROM telemetry WHERE asset_id=? ORDER BY observed_at DESC LIMIT 120').all(id).reverse().map(row=>{const m=jsonOrNull(row.metrics);return {at:new Date(row.observed_at).toISOString(),cpuPercent:m?.cpuPercent??null,memoryPercent:m?.memory?.usedPercent??null};});
-      json(res,200,{...asset,metrics:jsonOrNull(asset.metrics),inventory:jsonOrNull(asset.inventory),agent:jsonOrNull(asset.agent_info),agent_info:undefined,history});return true;
+      json(res,200,{...asset,deleted_at:assetArchive(db,asset.id)?.deleted_at??null,metrics:jsonOrNull(asset.metrics),inventory:jsonOrNull(asset.inventory),agent:jsonOrNull(asset.agent_info),agent_info:undefined,history});return true;
     }
     return false;
   }

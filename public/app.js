@@ -131,7 +131,7 @@ setInterval(async()=>{
   const summary=document.querySelector('#inventory-filter-summary');if(summary)summary.innerHTML=inventoryFilterSummary();
   const table=document.querySelector('#live-assets-table');if(table){if(page==='assets'){if(!table.querySelector('form')&&!table.contains(document.activeElement))mountInventory();}else{table.innerHTML=monitorTable(assets);bindLiveActions();}}
   if(page==='monitor'&&selectedMachine){const detail=await api('asset-details/'+selectedMachine);if(page!==currentPage||selectedMachine!==currentMachine)return;
-   const changed=machineData?.last_inventory_at!==detail.last_inventory_at;machineData=detail;
+   const changed=machineData?.last_inventory_at!==detail.last_inventory_at||machineData?.deleted_at!==detail.deleted_at;machineData=detail;
    if(changed){render();}else{refreshDeviceDetails(content,detail);}
   }
   if(document.querySelector('#live-assets-count'))document.querySelector('#live-assets-count').textContent=has('assets.read')?assets.length:'—';

@@ -1,6 +1,8 @@
+import {ensureAssetArchive,assetArchive} from './asset-archive.mjs';
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const validDate=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||value>'9998-12-31')return false;const d=new Date(value+'T00:00:00Z');return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===value;};
 export function createClientPortal({db,json,config}){
+ ensureAssetArchive(db);
  const fields='t.id,t.title,t.description,t.priority,t.status,t.created,t.status_since,t.service_type,u.name AS operator_name';
  function companyScope(req,user){
   if(!Number.isSafeInteger(user.client_id)||!db.prepare('SELECT id FROM clients WHERE id=?').get(user.client_id))fail('Acesso sem empresa válida. Solicite a revisão ao administrador.',403);
@@ -28,7 +30,7 @@ export function createClientPortal({db,json,config}){
    if(!/^\d+$/.test(raw)||Number(raw)<1||Number(raw)>1000000)fail('Página inválida');
    const now=new Date(),cutoff=new Date(now.getTime()-120000).toISOString();
    const online="(a.last_seen IS NOT NULL AND julianday(a.last_seen)>=julianday(?))";
-   const conditions=['a.client_id=?'],args=[user.client_id];
+   const conditions=['a.client_id=?','NOT EXISTS (SELECT 1 FROM asset_archive ar WHERE ar.asset_id=a.id)'],args=[user.client_id];
    if(search){conditions.push("(instr(lower(a.name),lower(?))>0 OR instr(lower(coalesce(a.owner,'')),lower(?))>0 OR instr(lower(coalesce(a.code,'')),lower(?))>0 OR instr(lower(coalesce(a.os,'')),lower(?))>0)");args.push(search,search,search,search);}
    if(status==='online'){conditions.push(online);args.push(cutoff);}
    if(status==='offline'){conditions.push('a.last_seen IS NOT NULL AND NOT '+online);args.push(cutoff);}
@@ -37,7 +39,7 @@ export function createClientPortal({db,json,config}){
    const total=db.prepare(`SELECT count(*) n FROM assets a ${where}`).get(...args).n,pages=Math.max(1,Math.ceil(total/pageSize)),page=Math.min(Number(raw),pages);
    // Lista explícita: não expor tokens, inventário bruto, cofre ou ações administrativas.
    const rows=db.prepare(`SELECT a.id,a.code,a.name,a.owner,a.os,a.last_seen,${online} AS online FROM assets a ${where} ORDER BY a.name COLLATE NOCASE,a.id LIMIT ? OFFSET ?`).all(cutoff,...args,pageSize,(page-1)*pageSize).map(row=>({...row,online:!!row.online}));
-   const stats=db.prepare(`SELECT count(*) total,coalesce(sum(${online}),0) online,coalesce(sum(a.last_seen IS NULL),0) pending FROM assets a WHERE a.client_id=?`).get(cutoff,user.client_id);
+   const stats=db.prepare(`SELECT count(*) total,coalesce(sum(${online}),0) online,coalesce(sum(a.last_seen IS NULL),0) pending FROM assets a WHERE a.client_id=? AND NOT EXISTS (SELECT 1 FROM asset_archive ar WHERE ar.asset_id=a.id)`).get(cutoff,user.client_id);
    stats.offline=stats.total-stats.online-stats.pending;
    json(res,200,{company:db.prepare('SELECT id,name FROM clients WHERE id=?').get(user.client_id),rows,total,page,pages,stats,filters:{search,status},updatedAt:now.toISOString()});return true;
   }

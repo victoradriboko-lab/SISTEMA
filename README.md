@@ -357,3 +357,7 @@ chamados, equipamentos, monitoramento e usuários exibem até 10 registros por p
 ### Cadastro de novos clientes
 
 Abra **Clientes → Empresas e contratos → Novo cliente**, informe o nome da empresa e clique em **Cadastrar cliente**. O sistema abre a ficha para completar contatos, documentação e contrato. O cadastro exige permissão de cadastrar equipamentos (`assets.write`), como a criação de empresas pelo inventário. Para liberar o portal, use **Clientes → Acessos de clientes** e vincule o acesso à empresa. O caminho **Inventário → Equipamentos → Nova empresa / token** continua disponível.
+
+### Download de Agentes
+
+O menu **Download de Agentes** abre uma página própria com os pacotes Windows/Windows Server: **Instalador EXE**, **Pacote ZIP** e **Como instalar**. O bloco foi movido da tela Equipamentos para essa página. O acesso exige `assets.write`.

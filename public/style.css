@@ -353,3 +353,17 @@ aside > nav { align-content: start; }
 .portal-pagination { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; }
 .portal-pagination span { color: var(--muted); font-size: 12px; }
 @media(max-width:540px) { .portal-chart-controls { grid-template-columns: minmax(0,1fr); } }
+
+/* Página dedicada para os pacotes de agentes disponíveis. */
+.agent-platforms{display:flex;flex-wrap:wrap;gap:10px;padding:14px 18px;margin-bottom:20px;border:1px solid var(--border);border-radius:10px;background:var(--panel)}
+.agent-platforms a{padding:8px 12px;border-radius:6px;color:var(--muted);text-decoration:none;font-size:13px}
+.agent-platforms a.active{background:#3974ed;color:#fff}
+.agent-platform-heading{display:flex;align-items:center;gap:15px;border-bottom:1px solid var(--border);padding-bottom:18px;margin-bottom:22px}
+.agent-platform-heading>span:first-child{font-size:38px;color:var(--cyan)}
+.agent-platform-heading h2{margin:0}.agent-platform-heading p{margin:6px 0 0;color:var(--muted);font-size:12px}
+.agent-platform-heading>.badge{margin-left:auto}
+.agent-download-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.agent-download-card{display:flex;flex-direction:column;align-items:flex-start;padding:24px;border:1px solid var(--border);border-radius:10px}
+.agent-download-card h3{font-size:20px;margin:14px 0 0}.agent-download-card p{line-height:1.7}.agent-download-card .download-button{margin-top:auto}
+.agent-install-guide{scroll-margin-top:20px}.agent-install-guide li{padding:6px 0;line-height:1.7}.agent-install-guide p{line-height:1.7}
+@media(max-width:760px){.agent-download-grid{grid-template-columns:minmax(0,1fr)}.agent-download-card{padding:18px}.agent-platform-heading{flex-wrap:wrap}.agent-platform-heading>.badge{margin-left:0}}

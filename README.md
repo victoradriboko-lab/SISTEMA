@@ -353,3 +353,7 @@ da página, contador e botões Anterior/Próximo. O cadastro de empresa divide d
 contatos, documentação, contrato, equipamentos, valores, horário e metas em etapas
 menores. O salvamento do cadastro completo fica disponível em todas elas. Listas de
 chamados, equipamentos, monitoramento e usuários exibem até 10 registros por página.
+
+### Cadastro de novos clientes
+
+Abra **Clientes → Empresas e contratos → Novo cliente**, informe o nome da empresa e clique em **Cadastrar cliente**. O sistema abre a ficha para completar contatos, documentação e contrato. O cadastro exige permissão de cadastrar equipamentos (`assets.write`), como a criação de empresas pelo inventário. Para liberar o portal, use **Clientes → Acessos de clientes** e vincule o acesso à empresa. O caminho **Inventário → Equipamentos → Nova empresa / token** continua disponível.

@@ -65,6 +65,8 @@ O navegador pode utilizar HTTPS na porta 443 de cada domínio enquanto os destin
 
 ## Contas e sessões
 
+O login do Painel do Cliente utiliza somente e-mail e senha, inclusive para contas com segundo fator configurado anteriormente. O painel não oferece configuração de autenticador. O segundo fator das contas internas permanece disponível e é exigido quando ativado.
+
 - Crie e gerencie clientes em **Acessos de clientes**, na entrada interna. Contas de clientes não são contas de operadores.
 - O painel só autentica contas de clientes; o sistema interno só autentica contas internas. Não há cadastro inicial de administrador pela porta do painel.
 - O cookie do sistema interno continua `session`; o painel utiliza `servitec_client_session`. Como cookies não são separados por porta, o servidor também verifica o tipo de entrada salvo na sessão e o tipo atual da conta. Renomear ou copiar cookies não permite trocar de sistema.

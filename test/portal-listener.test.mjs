@@ -40,6 +40,15 @@ test('portas dedicadas isolam contas, sessões, origens e arquivos; migração p
   assert.equal((await call(internal,'me','GET',undefined,'session='+c.cookie.split('=')[1])).status,401);
   assert.equal((await call(portal,'me','GET',undefined,'servitec_client_session='+a.cookie.split('=')[1])).status,401);
   db=new DatabaseSync(join(dir,'sistema.db'));
+  // Clientes com MFA antigo entram apenas com senha; MFA interno continua obrigatório.
+  const clientId=db.prepare('SELECT id FROM users WHERE email=?').get(credentials.email).id;
+  db.prepare("INSERT INTO user_mfa(user_id,secret,enabled) VALUES(?,'',1)").run(clientId);
+  assert.equal((await call(portal,'login','POST',credentials)).status,200);
+  assert.equal((await call(portal,'security/setup','POST',{password},c.cookie)).status,403);
+  db.prepare("INSERT INTO user_mfa(user_id,secret,enabled) VALUES(1,'',1)").run();
+  assert.equal((await call(internal,'login','POST',adminCredentials)).status,401);
+  db.prepare('DELETE FROM user_mfa WHERE user_id IN (?,1)').run(clientId);
+
   const clientToken=c.cookie.split('=')[1];db.prepare("UPDATE sessions SET audience='internal' WHERE token=?").run(clientToken);
   assert.equal((await call(internal,'me','GET',undefined,'session='+clientToken)).status,401);
   db.prepare("UPDATE sessions SET audience='client' WHERE token=?").run(clientToken);

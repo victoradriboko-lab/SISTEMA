@@ -3,6 +3,9 @@ using Servitec;
 class PolicyTests {
     static void Main() {
         int count = 0;
+        if (AgentPolicy.NetworkSpeedMbps(1000000000) != 1000 || AgentPolicy.NetworkSpeedMbps(18446744073709551615d) != null || AgentPolicy.NetworkSpeedMbps(-1) != null || AgentPolicy.NetworkSpeedMbps(null) != null) throw new Exception("Velocidade desconhecida deve ser nula"); count += 4;
+        string secret = "aB3dE5gH7j"; string safe = AgentPolicy.SafeDiagnostic("Erro " + secret + "\r\nBearer outraChave",secret);
+        if (safe.Contains(secret) || safe.Contains("outraChave") || safe.Contains("\r") || safe.Contains("\n") || AgentPolicy.SafeDiagnostic(new string('x',500),secret).Length != 400) throw new Exception("Diagnostico deve ocultar tokens e limitar tamanho"); count++;
         foreach (string token in new [] { "aB3dE5gH7j", new string('a',64) }) { if (!AgentPolicy.ValidAgentToken(token)) throw new Exception("Token valido rejeitado"); count++; }
         foreach (string token in new [] { "123456789", "12345678901", "12345_7890", "ABCDEFGHIJ\n" }) { if (AgentPolicy.ValidAgentToken(token)) throw new Exception("Token invalido aceito"); count++; }
         foreach (string url in new [] { "https://servidor.example", "https://servidor.example:443/", "http://127.0.0.1:3000", "http://192.168.1.10:3000", "http://10.0.0.2:3000", "http://172.16.2.3:3000", "http://172.31.255.254:3000" }) { AgentPolicy.ServerUri(url,true); count++; }

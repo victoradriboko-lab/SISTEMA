@@ -146,7 +146,7 @@ try {
         Write-Host 'Atalhos SERVITEC VSA - Abrir chamado criados na Area de Trabalho e no menu Iniciar.' -ForegroundColor Green
     }
     $support = $null
-    Write-Host 'Servico instalado e iniciado. A coleta completa pode levar ate alguns minutos.' -ForegroundColor Green
+    Write-Host 'Servico instalado e iniciado. Aguarde no log a mensagem: Primeira coleta aceita pelo servidor.' -ForegroundColor Green
     Write-Host 'Confira Monitoramento no sistema. Log: C:\ProgramData\ServitecAgent\agent.log'
     Write-Host 'Nao e necessario abrir portas de entrada nas maquinas monitoradas.'
     exit 0

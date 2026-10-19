@@ -3,7 +3,15 @@ using System.Net;
 
 namespace Servitec {
     public static class AgentPolicy {
-        public const string Version = "1.2.1";
+        public const string Version = "1.2.2";
+        public static double? NetworkSpeedMbps(double? bits) { return bits.HasValue && !Double.IsNaN(bits.Value) && !Double.IsInfinity(bits.Value) && bits.Value >= 0 && bits.Value <= 1e15 ? bits.Value / 1000000 : (double?)null; }
+        public static string SafeDiagnostic(string message, string secret) {
+            string value = message ?? "";
+            if (!String.IsNullOrEmpty(secret)) value = value.Replace(secret,"[token oculto]");
+            value = System.Text.RegularExpressions.Regex.Replace(value,@"Bearer\s+[^\s]+","Bearer [oculto]",System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            value = System.Text.RegularExpressions.Regex.Replace(value,@"[\x00-\x1f\x7f]"," ");
+            return value.Length > 400 ? value.Substring(0,400) : value;
+        }
         public static bool ValidAgentToken(string value) { return value != null && System.Text.RegularExpressions.Regex.IsMatch(value, @"^(?:[A-Za-z0-9]{10}|[a-fA-F0-9]{64})\z"); }
         public static bool PrivateHttp(Uri uri) {
             IPAddress ip;

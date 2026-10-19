@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Security.AccessControl;
 using System.Security.Principal;
 
-[assembly: AssemblyVersion("1.2.1.0")]
+[assembly: AssemblyVersion("1.2.2.0")]
 [assembly: AssemblyTitle("Servitec - Instalador do agente")]
 [assembly: AssemblyProduct("Servitec Agent Setup")]
 namespace Servitec.Setup {

@@ -1,4 +1,4 @@
-# Agente Windows e Windows Server — 1.2.1
+# Agente Windows e Windows Server — 1.2.2
 
 Agente de inventário e telemetria para Windows 10/11 ou Windows Server 2016+, com .NET Framework 4.6.2+. Não executa comandos remotos nem coleta senhas ou arquivos pessoais. O aplicativo de abrir chamados usa autorização da empresa, sem login do usuário.
 
@@ -37,3 +37,11 @@ Os dois instaladores usam agora a porta 3000, mas mantêm seus protocolos distin
 ## Tokens de empresa com 10 caracteres
 
 Novos cadastros, importações e renovações geram tokens únicos de 10 letras e números, com diferenciação entre maiúsculas e minúsculas. Copie o valor exatamente como aparece na ficha. O instalador e o agente 1.2.1 aceitam esse formato. As chaves internas do aplicativo e tokens individuais legados de equipamentos não foram encurtados.
+
+## Correção de rejeição HTTP 400 — versão 1.2.2
+
+Velocidades desconhecidas de adaptadores WMI (como UINT64_MAX) não são enviadas como velocidades reais. O servidor atualizado aceita contadores opcionais desconhecidos de rede, slots e tipos/velocidades de memória como nulos, mantendo os demais dados válidos. Métricas de uso e capacidades continuam sendo validadas estritamente.
+
+O agente agora registra o motivo JSON devolvido pelo servidor em rejeições e confirma no log a primeira coleta aceita. Tokens são ocultados nas mensagens. A auditoria do servidor registra rejeições por empresa/equipamento, sem registrar o token. Erros internos de persistência passam a retornar HTTP 500 em vez de parecerem erros de validação.
+
+O agente 1.2.1 já consegue reenviar as amostras com os contadores especiais após atualizar o servidor. A versão 1.2.2 acrescenta prevenção na coleta e diagnóstico local. O serviço iniciado, por si só, não comprova que a API aceitou a coleta.

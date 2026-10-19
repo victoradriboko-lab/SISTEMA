@@ -66,3 +66,9 @@ Os dois instaladores usam agora a porta 3000, mas mantêm seus protocolos distin
 ### Substituição autorizada dos tokens longos de empresa
 
 Por solicitação explícita do proprietário, que informou não haver agentes ativos, esta atualização troca os tokens de empresa com mais de 10 caracteres por valores únicos de 10 letras e números na primeira inicialização do servidor. Tokens antigos ficam inválidos. Clientes, usuários, equipamentos, senhas e históricos permanecem intactos. A migração é transacional e idempotente: os tokens curtos não mudam nos reinícios seguintes. Novos cadastros, importações e renovações usam o mesmo formato curto. Use o instalador/agente 1.2.1 e copie o token exatamente, respeitando maiúsculas e minúsculas. A troca não encurta senhas, hashes, chaves internas do aplicativo ou tokens individuais antigos dos equipamentos.
+
+### Diagnóstico de amostras rejeitadas
+
+O servidor aceita valores sentinela numéricos de contadores WMI opcionais como desconhecidos (nulos), sem rejeitar o restante da coleta. Valores malformados e métricas de uso fora dos limites continuam sendo recusados. Em Configurações → Atividades, a ação `agent.sample.rejected` mostra o motivo da rejeição.
+
+O agente 1.2.2 registra o detalhe JSON do erro sem exibir o token e registra `Primeira coleta aceita pelo servidor. Cadastro e comunicacao confirmados.` quando a API confirmar a coleta. O log fica em `C:\ProgramData\ServitecAgent\agent.log`.

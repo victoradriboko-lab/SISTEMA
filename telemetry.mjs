@@ -6,8 +6,10 @@ import {join} from 'node:path';
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status});};
 const object=value=>value&&typeof value==='object'&&!Array.isArray(value);
 const text=(value,max=500)=>{if(value===null||value===undefined)return '';if(typeof value!=='string'||value.length>max)fail('Texto do inventário inválido');return value;};
-const number=(value,max=Number.MAX_SAFE_INTEGER)=>{if(value===null||value===undefined)return null;if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>max)fail('Métrica numérica inválida');return value;};
-const list=(value,max,convert)=>{if(!Array.isArray(value)||value.length>max)fail('Lista do inventário inválida');return value.map(item=>{if(!object(item))fail('Item do inventário inválido');return convert(item);});};
+const number=(value,max=Number.MAX_SAFE_INTEGER,field='Métrica numérica')=>{if(value===null||value===undefined)return null;if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>max)fail(field+': valor numérico inválido');return value;};
+const list=(value,max,convert,field='Lista do inventário')=>{if(!Array.isArray(value)||value.length>max)fail(field+': lista inválida');return value.map((item,index)=>{if(!object(item))fail(field+'['+index+']: item inválido');try{return convert(item);}catch(error){if(error.status===400)error.message=field+'['+index+']: '+error.message;throw error;}});};
+// Contadores WMI opcionais podem usar -1/UINT_MAX para indicar valor desconhecido.
+const reportedNumber=(value,max,field)=>typeof value==='number'&&Number.isFinite(value)&&(value<0||value>max)?null:number(value,max,field);
 const jsonOrNull=value=>value?JSON.parse(value):null;
 function normalizeInventory(value){
   if(!object(value))fail('Inventário inválido');
@@ -15,11 +17,11 @@ function normalizeInventory(value){
   for(const key of ['hostname','manufacturer','model','serialNumber','biosVersion','domain','osVersion','architecture'])result[key]=text(value[key]);
   if(!result.hostname)fail('Nome do computador é obrigatório no inventário');
   result.productType=number(value.productType,3);
-  result.processors=list(value.processors??[],32,p=>({name:text(p.name),cores:number(p.cores,4096),logicalProcessors:number(p.logicalProcessors,8192)}));
-  result.network=list(value.network??[],32,n=>{if(!Array.isArray(n.addresses)||n.addresses.length>32)fail('Endereços de rede inválidos');return {name:text(n.name),mac:text(n.mac,80),addresses:n.addresses.map(v=>text(v,100)),speedMbps:number(n.speedMbps,1e9),connectionStatus:number(n.connectionStatus,20),enabled:n.enabled==null?null:typeof n.enabled==='boolean'?n.enabled:fail('Estado de rede inválido')};});
-  result.programs=list(value.programs??[],500,p=>({name:text(p.name),version:text(p.version),publisher:text(p.publisher)}));
-  result.services=list(value.services??[],300,s=>({name:text(s.name),displayName:text(s.displayName),state:text(s.state,80),startMode:text(s.startMode,80)}));
-  return extendInventory(value,result,{text,number,list,object,fail});
+  result.processors=list(value.processors??[],32,p=>({name:text(p.name),cores:number(p.cores,4096),logicalProcessors:number(p.logicalProcessors,8192)}),'inventory.processors');
+  result.network=list(value.network??[],32,n=>{if(!Array.isArray(n.addresses)||n.addresses.length>32)fail('Endereços de rede inválidos');return {name:text(n.name),mac:text(n.mac,80),addresses:n.addresses.map(v=>text(v,100)),speedMbps:reportedNumber(n.speedMbps,1e9),connectionStatus:reportedNumber(n.connectionStatus,20),enabled:n.enabled==null?null:typeof n.enabled==='boolean'?n.enabled:fail('Estado de rede inválido')};},'inventory.network');
+  result.programs=list(value.programs??[],500,p=>({name:text(p.name),version:text(p.version),publisher:text(p.publisher)}),'inventory.programs');
+  result.services=list(value.services??[],300,s=>({name:text(s.name),displayName:text(s.displayName),state:text(s.state,80),startMode:text(s.startMode,80)}),'inventory.services');
+  return extendInventory(value,result,{text,number,reportedNumber,list,object,fail});
 }
 export function normalizeHeartbeat(payload,now=Date.now()){
   if(!object(payload))fail('Mensagem inválida');
@@ -36,7 +38,7 @@ export function normalizeHeartbeat(payload,now=Date.now()){
   if(!object(payload.agent)||payload.agent.platform!=='windows'||typeof payload.agent.machineId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(payload.agent.machineId))fail('Identificação do agente inválida');
   if(!object(payload.metrics))fail('Métricas inválidas');
   const m=payload.metrics,memory=m.memory??{};if(!object(memory))fail('Memória inválida');
-  const metrics={cpuPercent:number(m.cpuPercent,100),memory:{total:number(memory.total),available:number(memory.available),usedPercent:number(memory.usedPercent,100)},uptimeSeconds:number(m.uptimeSeconds),disks:list(m.disks??[],64,d=>({name:text(d.name,80),total:number(d.total),available:number(d.available),usedPercent:number(d.usedPercent,100)}))};
+  const metrics={cpuPercent:number(m.cpuPercent,100,'metrics.cpuPercent'),memory:{total:number(memory.total,Number.MAX_SAFE_INTEGER,'metrics.memory.total'),available:number(memory.available,Number.MAX_SAFE_INTEGER,'metrics.memory.available'),usedPercent:number(memory.usedPercent,100,'metrics.memory.usedPercent')},uptimeSeconds:number(m.uptimeSeconds),disks:list(m.disks??[],64,d=>({name:text(d.name,80),total:number(d.total),available:number(d.available),usedPercent:number(d.usedPercent,100)}))};
   if(metrics.memory.total!==null&&metrics.memory.available!==null&&metrics.memory.available>metrics.memory.total)fail('Memória disponível maior que o total');
   for(const d of metrics.disks)if(d.total!==null&&d.available!==null&&d.available>d.total)fail('Espaço livre maior que o disco');
   return {legacy:false,sampleId:payload.sampleId,observedAt,os:text(payload.os),agent:{version:text(payload.agent.version,40),platform:'windows'},machineId:payload.agent.machineId.toLowerCase(),metrics,inventory:payload.inventory===undefined?undefined:normalizeInventory(payload.inventory)};
@@ -55,6 +57,7 @@ export function createTelemetry({db,body,json,config,root,clients}){
     if(!asset&&!client){json(res,401,{error:'Token inválido'});return true;}
     if(path==='/api/agent/check'&&client){json(res,200,{ok:true,protocolVersion:1,client});return true;}
     if(path==='/api/agent/check'){json(res,200,{ok:true,protocolVersion:1,asset:{id:asset.id,name:asset.name}});return true;}
+    try {
     const sample=normalizeHeartbeat(await body(req));
     if(client){client=clients.getClient(token);if(!client)fail('Token revogado',401);asset=clients.enroll(client,sample);if(!asset){json(res,200,{ok:true,requestInventory:true});return true;}}
     if(!client&&asset.machine_id&&(sample.legacy||asset.machine_id!==sample.machineId))fail('Token vinculado a outra instalação. Renove o token do equipamento para reinstalar.',409);
@@ -72,6 +75,12 @@ export function createTelemetry({db,body,json,config,root,clients}){
       db.exec('COMMIT');
     }catch(e){db.exec('ROLLBACK');throw e;}
     json(res,200,{ok:true,serverTime:new Date(now).toISOString(),requestInventory:!sample.legacy&&!sample.inventory&&!current.has_inventory});return true;
+    } catch(error) {
+      const reason=String(error.message||error.name).split(token).join('[oculto]').replace(/[\r\n\t]/g,' ').slice(0,500);
+      try { config.audit(null,'agent.sample.rejected',`${client?'Empresa #'+client.id:'Equipamento #'+asset.id}: ${reason}`); } catch {}
+      if(!error.status){const malformed=error instanceof SyntaxError;error.status=malformed?400:500;error.message=malformed?'JSON da coleta inválido':'Falha interna ao registrar coleta. Consulte a auditoria do servidor.';}
+      throw error;
+    }
   }
   async function handle(req,res,path,user){
     if(['/api/agent/windows-package','/api/agent/windows-installer','/api/agent/windows-installer-http'].includes(path)&&req.method==='GET'){

@@ -15,7 +15,7 @@ using System.Threading;
 using System.Web.Script.Serialization;
 using Microsoft.Win32;
 
-[assembly: AssemblyVersion("1.2.1.0")]
+[assembly: AssemblyVersion("1.2.2.0")]
 namespace Servitec {
     internal sealed class AgentHttpException : Exception { public readonly int Status; public AgentHttpException(int status) { Status = status; } }
     public sealed class AgentService : ServiceBase {
@@ -30,6 +30,7 @@ namespace Servitec {
         private int interval;
         private DateTime inventoryDue = DateTime.MinValue;
         private PerformanceCounter cpu;
+        private bool serverConfirmed;
         public AgentService() { ServiceName = "ServitecAgent"; CanStop = true; AutoLog = false; }
         public static void Main(string[] args) {
             if (args.Length == 1 && args[0] == "--version") { Console.WriteLine(AgentPolicy.Version); return; }
@@ -107,17 +108,30 @@ namespace Servitec {
                 Environment.Exit(1);
             } finally { if (cpu != null) cpu.Dispose(); if (client != null) client.Dispose(); }
         }
+        private string ResponseError(HttpResponseMessage response) {
+            try {
+                using (Stream stream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult())
+                using (StreamReader reader = new StreamReader(stream,Encoding.UTF8)) {
+                    char[] buffer = new char[4096]; int length = reader.ReadBlock(buffer,0,buffer.Length);
+                    Dictionary<string,object> error = json.Deserialize<Dictionary<string,object>>(new string(buffer,0,length));
+                    object message; if (error.TryGetValue("error",out message) && message is string) return AgentPolicy.SafeDiagnostic((string)message,token);
+                }
+            } catch { }
+            return "Servidor nao informou detalhe JSON do erro.";
+        }
         private void Send(string path) {
             string value = File.ReadAllText(path, Encoding.UTF8);
             using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, endpoint)) {
                 request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                 request.Content = new StringContent(value, Encoding.UTF8, "application/json");
                 using (HttpResponseMessage response = client.SendAsync(request).GetAwaiter().GetResult()) {
-                    if ((int)response.StatusCode == 400 || (int)response.StatusCode == 413) { File.Delete(path); Log("Amostra recusada e descartada: HTTP " + (int)response.StatusCode); return; }
-                    if (!response.IsSuccessStatusCode) throw new AgentHttpException((int)response.StatusCode);
+                    if ((int)response.StatusCode == 400 || (int)response.StatusCode == 413) { string reason = ResponseError(response); File.Delete(path); inventoryDue = DateTime.MinValue; Log("Amostra recusada e descartada: HTTP " + (int)response.StatusCode + " - " + reason); return; }
+                    if (!response.IsSuccessStatusCode) { Log("Servidor recusou coleta: HTTP " + (int)response.StatusCode + " - " + ResponseError(response)); throw new AgentHttpException((int)response.StatusCode); }
                     string text = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                     Dictionary<string, object> result = json.Deserialize<Dictionary<string, object>>(text);
+                    if (!result.ContainsKey("ok") || !Convert.ToBoolean(result["ok"])) throw new InvalidDataException("Resposta sem confirmacao da API");
                     if (result.ContainsKey("requestInventory") && Convert.ToBoolean(result["requestInventory"])) inventoryDue = DateTime.MinValue;
+                    else if (!serverConfirmed) { serverConfirmed = true; Log("Primeira coleta aceita pelo servidor. Cadastro e comunicacao confirmados."); }
                 }
             }
             File.Delete(path);
@@ -138,7 +152,7 @@ namespace Servitec {
             return rows;
         }
         private static object Value(Dictionary<string, object> row, string key) { return row != null && row.ContainsKey(key) ? row[key] : null; }
-        private static double? Number(object value) { double n; return value != null && Double.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out n) ? (double?)n : null; }
+        private static double? Number(object value) { double n; return value != null && Double.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out n) && !Double.IsNaN(n) && !Double.IsInfinity(n) && n >= 0 ? (double?)n : null; }
         private static string Text(object value) { string text = Convert.ToString(value); return text.Length > 500 ? text.Substring(0, 500) : text; }
         private Dictionary<string, object> Collect() {
             Dictionary<string, object> os = Query("SELECT Caption,Version,OSArchitecture,TotalVisibleMemorySize,FreePhysicalMemory,LastBootUpTime,ProductType,BuildNumber FROM Win32_OperatingSystem", new [] { "Caption","Version","OSArchitecture","TotalVisibleMemorySize","FreePhysicalMemory","LastBootUpTime","ProductType","BuildNumber" }).FirstOrDefault();
@@ -170,7 +184,7 @@ namespace Servitec {
             List<Dictionary<string, object>> network = new List<Dictionary<string, object>>();
             foreach (Dictionary<string, object> n in Query("SELECT Description,MACAddress,IPAddress,IPEnabled FROM Win32_NetworkAdapterConfiguration",new [] {"Description","MACAddress","IPAddress","IPEnabled"}).Take(32)) {
                 Dictionary<string, object> adapter = adapters.FirstOrDefault(a => Text(Value(a,"MACAddress")).Equals(Text(Value(n,"MACAddress")),StringComparison.OrdinalIgnoreCase));
-                network.Add(new Dictionary<string, object> { {"name",Text(Value(n,"Description"))}, {"mac",Text(Value(n,"MACAddress"))}, {"addresses",Value(n,"IPAddress") ?? new string[0]}, {"enabled",Value(n,"IPEnabled")}, {"speedMbps",Number(Value(adapter,"Speed")) / 1000000}, {"connectionStatus",Number(Value(adapter,"NetConnectionStatus"))} });
+                network.Add(new Dictionary<string, object> { {"name",Text(Value(n,"Description"))}, {"mac",Text(Value(n,"MACAddress"))}, {"addresses",Value(n,"IPAddress") ?? new string[0]}, {"enabled",Value(n,"IPEnabled")}, {"speedMbps",AgentPolicy.NetworkSpeedMbps(Number(Value(adapter,"Speed")))}, {"connectionStatus",Number(Value(adapter,"NetConnectionStatus"))} });
             }
             List<Dictionary<string, object>> services = Query("SELECT Name,DisplayName,State,StartMode FROM Win32_Service ",new [] {"Name","DisplayName","State","StartMode"}).Take(300).Select(s => new Dictionary<string,object> { {"name",Text(Value(s,"Name"))}, {"displayName",Text(Value(s,"DisplayName"))}, {"state",Text(Value(s,"State"))}, {"startMode",Text(Value(s,"StartMode"))} }).ToList();
             Dictionary<string, object> board = Query("SELECT Manufacturer,Product,SerialNumber,Version FROM Win32_BaseBoard",new [] {"Manufacturer","Product","SerialNumber","Version"}).FirstOrDefault();

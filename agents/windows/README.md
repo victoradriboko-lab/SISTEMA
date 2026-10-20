@@ -86,3 +86,7 @@ Atualize o código no servidor após a compilação. Instalações existentes re
 os novos ícones ao reinstalar/atualizar com o pacote novo. O Windows pode manter
 um ícone antigo em cache por algum tempo. A personalização não adiciona uma
 interface de bandeja ao serviço e não altera tokens ou dados de instalação.
+
+Na plataforma, o nome apresentado no download é `App-Servitec.exe`.
+A alternativa HTTP é `App-Servitec-HTTP.exe`. Os nomes internos dos binários
+permanecem compatíveis com a instalação e o serviço existentes.

@@ -90,7 +90,8 @@ export function createTelemetry({db,body,json,config,root,clients}){
       if(!config.allowed(user,'assets.write'))fail('Sem permissão para instalar agentes',403);
       const installer=path.includes('windows-installer');const filename=path.endsWith('windows-installer-http')?'ServitecAgentSetupHttp.exe':installer?'ServitecAgentSetup.exe':'servitec-agent-windows.zip';
       let data;try{data=readFileSync(join(root,'agents/windows',filename));}catch{fail('Pacote do agente ainda não foi gerado no servidor',503);}
-      res.writeHead(200,{'Content-Type':installer?'application/octet-stream':'application/zip','Content-Disposition':`attachment; filename="${filename}"`});res.end(data);return true;
+      const downloadName=installer?(path.endsWith('windows-installer-http')?'App-Servitec-HTTP.exe':'App-Servitec.exe'):filename;
+      res.writeHead(200,{'Content-Type':installer?'application/octet-stream':'application/zip','Content-Disposition':`attachment; filename="${downloadName}"`});res.end(data);return true;
     }
     if(/^\/api\/assets\/\d+\/telemetry$/.test(path)&&req.method==='GET'){
       if(!config.allowed(user,'monitor.read'))fail('Sem permissão para consultar monitoramento',403);

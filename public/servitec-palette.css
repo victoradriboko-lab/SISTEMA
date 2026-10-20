@@ -1,0 +1,67 @@
+/* Paleta Servitec baseada no modelo fornecido: marinho, preto e violeta.
+   Limitada à área interna; a preferência de tema claro continua disponível. */
+:root[data-surface=internal][data-theme=dark] { color-scheme:dark;--background:#08122f;--surface:#2b0664;--surface-raised:#390b78;--panel:#2b0664;--text:#f5f3ff;--muted:#cfc3f3;--cyan:#b58aff;--purple:#7600ff;--border:#4a1680;--servitec-accent:#7600ff;--servitec-summary:#08066b; }
+:root[data-surface=internal][data-theme=dark] body { background:var(--background);color:var(--text); }
+:root[data-surface=internal][data-theme=dark] header { background:#000;border-bottom-color:#171b39; }
+:root[data-surface=internal][data-theme=dark] :is(.hero,.dashboard-welcome) { background:var(--background);border-color:transparent;box-shadow:none; }
+:root[data-surface=internal][data-theme=dark] .hero::before,:root[data-surface=internal][data-theme=dark] .hero::after { display:none; }
+:root[data-surface=internal][data-theme=dark] :is(.hero h1 em,.eyebrow,.workspace-label) { color:var(--text); }
+:root[data-surface=internal][data-theme=dark] :is(.card,.card:nth-child(n),.panel,.ticket-properties) { background:var(--surface);border-color:var(--border);border-radius:14px;box-shadow:none; }
+:root[data-surface=internal][data-theme=dark] .card strong { font-family:inherit;font-weight:750;color:var(--text); }
+:root[data-surface=internal][data-theme=dark] :is(.card span,label,th,.hero p) { color:var(--muted); }
+:root[data-surface=internal][data-theme=dark] .panel h2::after { background:var(--servitec-accent); }
+:root[data-surface=internal][data-theme=dark] :is(input,textarea,select) { background:var(--background);border-color:#67419a;color:var(--text); }
+:root[data-surface=internal][data-theme=dark] input::placeholder,:root[data-surface=internal][data-theme=dark] textarea::placeholder { color:#aa9bc7; }
+:root[data-surface=internal][data-theme=dark] button { background:var(--surface-raised);border-color:#67419a;color:var(--text);border-radius:20px; }
+:root[data-surface=internal][data-theme=dark] button:hover { background:#48118e;border-color:#b58aff; }
+:root[data-surface=internal][data-theme=dark] :is(.primary,.download-button,.dashboard-cards .card button) { background:var(--servitec-accent);border-color:var(--servitec-accent);color:#fff;box-shadow:none; }
+:root[data-surface=internal][data-theme=dark] :is(.primary,.download-button,.dashboard-cards .card button):hover { background:#8c26ff;border-color:#bc91ff; }
+:root[data-surface=internal][data-theme=dark] #logout { background:#000;border:1px solid #962fff;border-radius:24px;color:#fff; }
+:root[data-surface=internal][data-theme=dark] :is(td,th) { border-bottom-color:var(--border); }
+:root[data-surface=internal][data-theme=dark] tbody tr:hover { background:#390b78; }
+:root[data-surface=internal][data-theme=dark] :is(.settings-tabs button.active,.workspace-tabs button[aria-selected=true]) { background:#7600ff;color:#fff;border-color:#ad71ff; }
+:root[data-surface=internal][data-theme=dark] .ops-dashboard { --ops-bg:#2b0664;--ops-text:#f5f3ff;--ops-muted:#cfc3f3; }
+:root[data-surface=internal][data-theme=dark] .ops-tile { background:var(--ops-bg);border-color:#4a1680;border-radius:14px;box-shadow:none;padding:20px;gap:12px; }
+:root[data-surface=internal][data-theme=dark] .ops-tile:hover { background:#390b78;border-color:#9954ff; }
+:root[data-surface=internal][data-theme=dark] :is(.ops-tile-label,.ops-tile strong) { color:var(--text); }
+:root[data-surface=internal][data-theme=dark] .ops-tile strong { font-weight:750; }
+:root[data-surface=internal][data-theme=dark] .ops-tile-icon { width:48px;height:48px;background:#7600ff;color:#fff;border:0;font-size:22px; }
+:root[data-surface=internal][data-theme=dark] .ops-tile small { color:var(--ops-muted);font-size:12px;line-height:1.5; }
+:root[data-surface=internal][data-theme=dark] .ops-toolbar { background:var(--servitec-summary);padding:20px;border-radius:14px; }
+:root[data-surface=internal][data-theme=dark] .ops-group h2 { color:var(--text);font-size:18px; }
+:root[data-surface=internal][data-theme=dark] .ops-red .ops-tile-icon { box-shadow:0 0 0 2px #ffb7bf; }
+:root[data-surface=internal][data-theme=dark] .ops-yellow .ops-tile-icon { box-shadow:0 0 0 2px #ffe397; }
+:root[data-surface=internal][data-theme=dark] .theme-toggle[aria-checked=true] .theme-switch-track { background:#7600ff;border-color:#b58aff; }
+:root[data-surface=internal][data-theme=dark] :focus-visible { outline-color:#c4a1ff; }
+:root[data-surface=internal][data-theme] aside { background:#000;border-color:#251044;scrollbar-color:#7600ff #000; }
+:root[data-surface=internal] .sidebar-search { background:#08122f;border-color:#67419a; }
+:root[data-surface=internal] .sidebar-search:focus-within { outline-color:#c4a1ff; }
+:root[data-surface=internal] #sidebar-nav :is(button,a):hover { background:#2b0664;color:#fff; }
+:root[data-surface=internal] #sidebar-nav :is(button.active,button.contains-active) { background:#7600ff;color:#fff; }
+:root[data-surface=internal] #sidebar-nav .nav-submenu { background:#11092b; }
+:root[data-surface=internal] #sidebar-nav .nav-submenu button.active { background:#2b0664;color:#fff;box-shadow:inset 3px 0 #a760ff; }
+:root[data-surface=internal] #sidebar-nav :is(button,a):focus-visible { outline-color:#c4a1ff; }
+
+/* Tela de entrada conforme o modelo, preservando a autenticação existente. */
+:root[data-surface=internal][data-auth=guest] aside { position:absolute;inset:0 0 auto;width:100%;height:64px;max-height:none;padding:0 max(24px,calc((100% - 1240px)/2));border:0;overflow:visible;display:flex;justify-content:center;background:#000; }
+:root[data-surface=internal][data-auth=guest] aside .brand { padding:0;min-height:0;display:block; }
+:root[data-surface=internal][data-auth=guest] aside .brand .servitec-logo-frame { width:128px;height:44px;padding:5px 0;border:0;border-radius:0;background:transparent; }
+:root[data-surface=internal][data-auth=guest] :is(aside footer,.brand-wordmark,main>header,.auth-hero) { display:none; }
+:root[data-surface=internal][data-auth=guest] main { margin-left:0;padding-top:64px;min-height:100dvh; }
+:root[data-surface=internal][data-auth=guest] #content { min-height:calc(100dvh - 64px);display:grid;place-items:center;padding:32px 20px;max-width:1280px; }
+:root[data-surface=internal][data-auth=guest] .auth-layout { display:block;width:100%;max-width:342px;margin:0;padding:0; }
+:root[data-surface=internal][data-auth=guest] .auth-form { padding:16px;border-radius:12px; }
+:root[data-surface=internal][data-auth=guest] .auth-tagline { margin:0 0 16px;font-size:23px;font-weight:800;letter-spacing:-.5px;line-height:1.12; }
+:root[data-surface=internal][data-auth=guest] .auth-tagline em { color:#00b6d7;font-style:normal; }
+:root[data-surface=internal][data-auth=guest] .auth-form h2 { font-size:20px;margin:0 0 12px; }
+:root[data-surface=internal][data-auth=guest] .auth-form h2::after { display:none; }
+:root[data-surface=internal][data-auth=guest] .auth-form p { font-size:12px;line-height:1.5;margin:0 0 12px; }
+:root[data-surface=internal][data-auth=guest] .auth-form label { margin:12px 0 5px;font-weight:400; }
+:root[data-surface=internal][data-auth=guest] .auth-form input:not([type=checkbox]) { min-height:34px;padding:7px 10px; }
+:root[data-surface=internal][data-auth=guest] .auth-show-password { display:flex;align-items:center;gap:10px;cursor:pointer; }
+:root[data-surface=internal][data-auth=guest] .auth-show-password input { width:18px;height:18px;margin:0;accent-color:#7600ff; }
+:root[data-surface=internal][data-auth=guest] .auth-form .primary { min-height:38px;margin-top:32px;padding:9px 18px;border-radius:24px; }
+:root[data-surface=internal][data-theme=dark][data-auth=guest] #content { background:radial-gradient(ellipse at 75% 25%,#220c642e,transparent 55%),radial-gradient(ellipse at 15% 75%,#003d5726,transparent 45%); }
+:root[data-surface=internal][data-theme=dark][data-auth=guest] .auth-form { background:#131e45;border-color:#202950; }
+:root[data-surface=internal][data-theme=dark][data-auth=guest] .auth-form input:not([type=checkbox]) { background:#131e45;border-color:#252b55; }
+:root[data-surface=internal][data-theme=dark][data-auth=guest] .auth-form :is(p,label) { color:#a7b4db; }

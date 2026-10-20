@@ -5,7 +5,7 @@
  const valid=value=>value==='light'||value==='dark';
  function apply(value){
   const theme=valid(value)?value:defaultTheme;root.dataset.theme=theme;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='dark'?(surface==='internal'?'#08122f':'#0b1422'):'#f3f6fc');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='dark'?'#0b1422':'#f3f6fc');
   document.querySelectorAll('[data-theme-toggle]').forEach(button=>{
    const dark=theme==='dark',next=dark?'modo claro':'modo escuro';
    button.setAttribute('aria-checked',String(dark));

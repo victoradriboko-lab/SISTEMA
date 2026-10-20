@@ -398,3 +398,46 @@ aside > nav { align-content: start; }
 .client-list-actions{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:8px}.client-list-actions :is(button,a){font-size:11px;padding:10px 12px;white-space:nowrap}.client-list-filters{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}.client-list-filters label{margin:0;flex:1 1 140px;font-size:11px}.client-list-filters label:first-child{flex:2 1 260px}.client-list-filters :is(input,select){padding:9px;font-size:12px;margin-top:6px}.client-list-filters button{padding:10px 12px;font-size:12px}#client-list-count{font-size:12px;color:var(--muted);margin:16px 0}.client-list-table{min-width:1050px}.client-list-table th button{border:0;background:transparent;padding:0;font-size:11px;color:inherit}.client-list-table td{font-size:12px;padding:14px 10px;vertical-align:middle}.client-list-table td small{display:block;font-size:11px;margin-top:6px;color:var(--muted)}.client-list-table .client-name-link{padding:0;border:0;background:transparent;color:var(--cyan);text-align:left;font-weight:650}.client-list-table td:last-child{min-width:220px}.client-list-table td:last-child button{font-size:10px;padding:7px 9px;margin:2px}.client-list-table input[type=checkbox]{width:15px;height:15px;margin:0}#client-list-action-area .panel{border-color:#4772a3}#client-list-action-area form{max-width:700px}#client-list-action-area h3{font-size:16px}#client-list-action-area p{font-size:12px;line-height:1.7}.client-token-result{display:block;overflow-wrap:anywhere;margin:18px 0;padding:15px;background:#123348;border-radius:6px;color:#8ce5ed}#client-import-preview{margin-top:20px}#client-import-preview table td{font-size:12px}
 @media(max-width:760px){.client-list-actions{justify-content:flex-start}.client-list-filters label{flex-basis:130px}}
 .client-list-table td{padding:9px 8px;font-size:11px;line-height:1.4}.client-list-table td:nth-child(3){min-width:180px}.client-list-table .client-name-link{display:block;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.client-list-table td:last-child{min-width:180px}.client-list-table td:last-child button{padding:6px;font-size:10px;margin:1px}
+
+/* Entrada Servitec: estilos restritos à sessão não autenticada. */
+:root[data-surface=internal][data-auth=guest] { color-scheme:dark;background:#393939; }
+:root[data-surface=internal][data-auth=guest] body { background:linear-gradient(180deg,#393939 65%,#5b5b5b);color:#eee; }
+:root[data-surface=internal][data-auth=guest] body>aside,
+:root[data-surface=internal][data-auth=guest] main>header { display:none; }
+:root[data-surface=internal][data-auth=guest] main { margin-left:0;min-height:100dvh; }
+:root[data-surface=internal][data-auth=guest] #content { max-width:1560px;min-height:100dvh;padding:64px 40px;display:grid;align-items:center; }
+:root[data-surface=internal][data-auth=guest] #notice:not(:empty) { position:relative;max-width:760px;margin:20px auto 0;padding:14px 20px; }
+.servitec-entry { display:grid;grid-template-columns:minmax(300px,414px) minmax(250px,310px) minmax(300px,1fr);gap:50px;align-items:center;width:100%; }
+.entry-login { min-width:0; }
+.entry-logo { display:flex;justify-content:center;margin-bottom:22px; }
+.entry-logo .servitec-logo-frame { width:190px;height:58px;background:transparent;border:0;border-radius:0;padding:0; }
+.entry-card { border:1px solid #c5c5c5;border-radius:9px;padding:30px 32px 20px;background:#39393980; }
+.entry-card h1 { color:#eee;font-size:34px;line-height:1.2;font-weight:650;letter-spacing:-1px;margin:0 0 20px; }
+.entry-card p { color:#ccc;font-size:12px; }
+.entry-field { display:flex;align-items:stretch;background:#e9f0ff;border:1px solid #bfc5ce;border-radius:5px;margin:0 0 14px;overflow:hidden; }
+.entry-field>span { width:48px;flex-shrink:0;display:grid;place-items:center;border-right:1px solid #777;color:#0078ed;background:#f7faff;font-size:26px; }
+.entry-field svg { width:28px;height:28px; }
+:root[data-surface=internal][data-auth=guest] .entry-field input { border:0;border-radius:0;background:#e9f0ff;color:#14213b;padding:12px;min-width:0;width:100%;font-size:13px;box-shadow:none; }
+.entry-field input::placeholder { color:#59667c;opacity:1; }
+.entry-field:focus-within { outline:3px solid #69b5ff;outline-offset:3px; }
+:root[data-surface=internal][data-auth=guest] .entry-field input:focus-visible { outline:0; }
+:root[data-surface=internal][data-auth=guest] .entry-show-password { display:flex;align-items:center;gap:8px;color:#ddd;font-size:12px;font-weight:400;margin:6px 0 16px;cursor:pointer; }
+.entry-show-password input { width:16px;height:16px;margin:0;accent-color:#0078ed; }
+:root[data-surface=internal][data-auth=guest] .entry-card .primary { display:block;width:100%;margin-top:16px;min-height:50px;padding:12px;border-radius:4px;background:#0075eb;border:1px solid #0075eb;color:white;font-weight:700;box-shadow:none; }
+:root[data-surface=internal][data-auth=guest] .entry-card .primary:hover { background:#0064cc;border-color:#64b2ff; }
+.entry-language { text-align:center;text-decoration:underline;margin:18px 0 0; }
+.entry-card .entry-help { text-align:center;font-size:11px;color:#bfbfbf;margin:12px 0 0;line-height:1.5; }
+.entry-story { padding-top:70px; }
+.entry-story h2 { color:#ddd;font-size:36px;line-height:1.25;font-weight:400;letter-spacing:-.6px;margin:0 0 16px; }
+.entry-story h2 strong { font-weight:700; }
+.entry-story p { color:#d0d0d0;font-size:14px;line-height:1.55;margin:0 0 22px; }
+.entry-contact { display:flex;align-items:center;justify-content:center;gap:16px;min-height:52px;padding:12px 18px;border:1px solid #ddd;border-radius:6px;color:#fff;text-decoration:none;font-weight:700; }
+.entry-contact:hover { background:#ffffff12;border-color:#69b5ff; }
+.entry-art { position:relative;min-width:0; }
+.entry-support { display:block;width:100%;max-height:620px;position:relative; }
+.entry-orbit { position:absolute;inset:15% -3% 3%;border:1px solid #5aa7ff40;border-radius:50%;transform:rotate(-25deg); }
+.entry-bubble { position:absolute;width:72px;height:72px;display:grid;place-items:center;background:linear-gradient(140deg,#70c5ff,#0074ed 60%,#0054be);border-radius:50%;box-shadow:inset 0 2px 8px #ffffff80,0 12px 30px #0002;color:white;font-size:34px;font-weight:700; }
+.entry-bubble-ticket { left:0;top:37%; }.entry-bubble-wifi { right:0;top:15%; }.entry-bubble-message { right:10%;bottom:0; }
+@media(min-width:1700px) { :root[data-surface=internal][data-auth=guest] #content { max-width:1600px;padding-left:100px; }.servitec-entry { gap:52px; } }
+@media(max-width:1150px) { .servitec-entry { grid-template-columns:minmax(300px,414px) minmax(240px,340px);justify-content:center;gap:40px; }.entry-art { display:none; } }
+@media(max-width:700px) { :root[data-surface=internal][data-auth=guest] #content { padding:32px 20px; }.servitec-entry { grid-template-columns:minmax(0,414px);gap:32px; }.entry-story { padding:0;text-align:center; }.entry-story h2 { font-size:28px; }.entry-card { padding:26px 22px 20px; }.entry-card h1 { font-size:29px; }.entry-contact { max-width:310px;margin:auto; } }

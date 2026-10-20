@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net462</TargetFramework>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <AssemblyName>ServitecAgentSetup</AssemblyName>
     <LangVersion>5</LangVersion>
     <ApplicationIcon>../branding/servitec.ico</ApplicationIcon>
@@ -15,5 +15,7 @@
     <Compile Include="Setup.cs" />
     <EmbeddedResource Include="../servitec-agent-windows.zip" LogicalName="Servitec.AgentPackage.zip" />
     <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
   </ItemGroup>
 </Project>

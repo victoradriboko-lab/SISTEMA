@@ -18,7 +18,7 @@ python scripts/package-agent.py "$agentOut\ServitecAgent.exe"
 if ($LASTEXITCODE -ne 0) { throw 'Falha ao empacotar o agente.' }
 foreach ($http in @($false,$true)) {
     $name = if ($http) { 'ServitecAgentSetupHttp.exe' } else { 'ServitecAgentSetup.exe' }
-    $options = @('/nologo','/target:exe','/optimize+','/platform:anycpu','/langversion:5',"/win32icon:$icon", "/win32manifest:$source\installer\app.manifest", "/out:$source\$name", '/r:System.IO.Compression.dll', "/resource:$source\servitec-agent-windows.zip,Servitec.AgentPackage.zip", "$source\installer\Setup.cs")
+    $options = @('/nologo','/target:winexe','/optimize+','/platform:anycpu','/langversion:5',"/win32icon:$icon", "/win32manifest:$source\installer\app.manifest", "/out:$source\$name", '/r:System.IO.Compression.dll', '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', "/resource:$source\servitec-agent-windows.zip,Servitec.AgentPackage.zip", "$source\installer\Setup.cs")
     if ($http) { $options += '/define:HTTP_DEFAULT' }
     & $csc $options
     if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar $name" }

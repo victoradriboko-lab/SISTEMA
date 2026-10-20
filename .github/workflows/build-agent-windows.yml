@@ -24,6 +24,17 @@ jobs:
       - name: Compilar e empacotar
         shell: powershell
         run: ./scripts/build-agent-windows.ps1
+      - name: Testar politica de conexao
+        shell: powershell
+        run: |
+          dotnet run --project agents/windows/tests/PolicyTests.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Falha nos testes de politica.' }
+      - name: Testar preservacao de servico e fila
+        shell: powershell
+        run: ./agents/windows/tests/ServiceUpdateTests.ps1
+      - name: Testar assistente grafico HTTP e HTTPS
+        shell: powershell
+        run: ./agents/windows/tests/InstallerTests.ps1
       - name: Guardar instaladores
         uses: actions/upload-artifact@v4
         with:

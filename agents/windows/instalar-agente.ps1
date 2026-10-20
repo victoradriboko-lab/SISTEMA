@@ -1,9 +1,14 @@
 param(
     [string]$ServerUrl = 'https://vsuarez.ddns.net:3000',
     [switch]$MonitorOnly,
-    [switch]$UseHttp
+    [switch]$UseHttp,
+    [switch]$Gui
 )
 $ErrorActionPreference = 'Stop'
+function Write-SetupProgress([int]$Percent, [string]$Message) {
+    if ($Gui) { Write-Output ('SERVITEC_PROGRESS:{0}:{1}' -f $Percent,$Message) }
+}
+Write-SetupProgress 25 'Verificando os requisitos do Windows...'
 try {
     . (Join-Path $PSScriptRoot 'AgentNetwork.ps1')
     . (Join-Path $PSScriptRoot 'AgentService.ps1')
@@ -37,14 +42,21 @@ try {
         if ((Read-Host 'HTTP nao criptografa os dados. Confirma uso somente na rede local? Digite SIM') -cne 'SIM') { throw 'Use um endereco HTTPS para continuar.' }
         $allowLan = $true
     }
-    Write-Host 'Informe o token abaixo e pressione Enter. A entrada fica oculta por seguranca.'
-    $secure = Read-Host 'Cole o token da empresa cliente (entrada oculta)' -AsSecureString
-    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-    try { $token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
+    if ($Gui) {
+        $token = $env:SERVITEC_SETUP_TOKEN
+        Remove-Item Env:\SERVITEC_SETUP_TOKEN -ErrorAction SilentlyContinue
+        if ([string]::IsNullOrWhiteSpace($token)) { throw 'Informe o token no assistente de instalacao.' }
+    } else {
+        Write-Host 'Informe o token abaixo e pressione Enter. A entrada fica oculta por seguranca.'
+        $secure = Read-Host 'Cole o token da empresa cliente (entrada oculta)' -AsSecureString
+        $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+        try { $token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
+    }
     $token = $token.Trim()
     if ($token -cnotmatch '^[A-Za-z0-9]{10}$') { throw 'O token deve ter 10 letras e numeros. Copie o token atual na ficha da empresa cliente.' }
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Write-Host 'Token informado. Verificando a conexao com a API do servidor...'
+    Write-SetupProgress 35 'Verificando a conexao com o servidor...'
     $state = Invoke-ServitecAgentRequest -Server $server -Path '/api/state'
     if ($state.portal -eq 'client') { throw 'O dominio aponta para o Painel do Cliente (porta 3001). Configure o proxy HTTPS para o sistema interno na porta 3000.' }
     if ($null -eq $state.initialized) { throw 'A resposta nao identifica a API do sistema interno. Confira o destino do proxy HTTPS.' }
@@ -97,11 +109,13 @@ try {
             [Array]::Clear($oldBytes,0,$oldBytes.Length)
         } catch { $sameContext = $false } finally { $oldToken = $null }
     }
+    Write-SetupProgress 50 'Preparando a configuracao da empresa...'
     $support = $null
     if ($installClient) {
         $support = Invoke-ServitecAgentRequest -Server $server -Path '/api/agent/support/enroll' -Method POST -Token $token -Body @{machineId=$machineId;name=$env:COMPUTERNAME}
         if ([string]$support.supportToken -notmatch '^[a-f0-9]{64}$') { throw 'Autorizacao do aplicativo invalida.' }
     }
+    Write-SetupProgress 60 'Atualizando o servico de monitoramento...'
     $phase = 'service'
     Stop-ServitecAgentForUpdate -ExpectedPath (Join-Path $target 'ServitecAgent.exe')
     Add-Type -AssemblyName System.Security
@@ -124,10 +138,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Nao foi possivel configurar recuperacao do servico.' }
     & sc.exe failureflag ServitecAgent 1 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Nao foi possivel configurar recuperacao de falhas.' }
+    Write-SetupProgress 78 'Iniciando o servico de monitoramento...'
     Start-Service -Name 'ServitecAgent'
     Start-Sleep -Seconds 3
     if ((Get-Service -Name 'ServitecAgent').Status -ne 'Running') { throw 'Servico encerrou. Consulte C:\ProgramData\ServitecAgent\agent.log' }
     if ($installClient) {
+        Write-SetupProgress 85 'Instalando o aplicativo e os atalhos...'
         # Pasta publica separada: o usuario pode executar o cliente sem ler o token/DPAPI do servico.
         $clientTarget = Join-Path $env:ProgramFiles 'ServitecClient'
         New-Item -ItemType Directory -Path $clientTarget -Force | Out-Null
@@ -170,6 +186,7 @@ try {
     Write-Host 'Servico instalado e iniciado. Aguarde no log a mensagem: Primeira coleta aceita pelo servidor.' -ForegroundColor Green
     Write-Host 'Confira Monitoramento no sistema. Log: C:\ProgramData\ServitecAgent\agent.log'
     Write-Host 'Nao e necessario abrir portas de entrada nas maquinas monitoradas.'
+    Write-SetupProgress 100 'Instalacao concluida.'
     exit 0
 } catch {
     Write-Host ('ERRO: ' + $_.Exception.Message) -ForegroundColor Red

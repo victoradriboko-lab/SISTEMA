@@ -90,3 +90,22 @@ interface de bandeja ao serviço e não altera tokens ou dados de instalação.
 Na plataforma, o nome apresentado no download é `App-Servitec.exe`.
 A alternativa HTTP é `App-Servitec-HTTP.exe`. Os nomes internos dos binários
 permanecem compatíveis com a instalação e o serviço existentes.
+
+### Assistente gráfico de instalação
+
+Os instaladores HTTP e HTTPS usam um assistente Windows com boas-vindas,
+informações da instalação, token da empresa, progresso por etapas e botão
+**Mostrar detalhes**. O token fica oculto no formulário e não é passado pela
+linha de comando. O progresso acompanha extração, validação da API, atualização
+do serviço e instalação do aplicativo/atalhos; não representa estimativa de tempo.
+Durante a atualização, o fechamento fica bloqueado para evitar interromper a
+cópia dos arquivos. Em caso de falha, os detalhes ficam visíveis.
+
+A tela de informações descreve o funcionamento do Servitec; não contém uma
+licença de terceiros. O fluxo por BAT/PowerShell permanece disponível.
+
+Após alterar o assistente, execute `scripts/build-agent-windows.ps1` no Windows
+ou o workflow de compilação antes de atualizar os downloads. Alterar somente o
+código-fonte não modifica os EXEs e o ZIP já existentes no repositório.
+Valide no Windows os dois protocolos, token inválido, servidor indisponível,
+instalação nova e reinstalação preservando identidade e fila.

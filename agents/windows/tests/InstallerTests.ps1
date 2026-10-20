@@ -28,7 +28,7 @@ foreach ($name in @('ServitecAgentSetup.exe','ServitecAgentSetupHttp.exe')) {
         if ((Field 'progress').Value -ne 100) { throw 'Barra deve limitar o progresso a 100%.' }
         $type.GetField('installing',$flags).SetValue($form,$true)
         $closing = New-Object System.Windows.Forms.FormClosingEventArgs ([System.Windows.Forms.CloseReason]::UserClosing),$false
-        $form.GetType().GetMethod('OnFormClosing',$flags).Invoke($form,@($closing))
+        $form.GetType().GetMethod('OnFormClosing',$flags).Invoke($form,@($closing.PSObject.BaseObject))
         if (-not $closing.Cancel) { throw 'Fechamento deve ser bloqueado durante a instalacao.' }
         Write-Output "PASS: $name - navegacao, protocolo, token oculto, progresso e fechamento."
     } finally { $form.Dispose() }

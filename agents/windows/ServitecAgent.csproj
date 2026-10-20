@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>ServitecAgent</AssemblyName>
     <LangVersion>5</LangVersion>
+    <ApplicationIcon>branding/servitec.ico</ApplicationIcon>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

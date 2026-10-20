@@ -43,6 +43,7 @@ namespace Servitec.Client {
         private readonly Button submit = new Button { Text = "Enviar chamado", Height = 44, Width = 190, BackColor = Color.FromArgb(0, 204, 153), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
         internal SupportForm(Uri server, string credential, string company) {
             origin = server; token = credential;
+            Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
             Text = "Servitec T.I. - Abrir chamado"; Size = new Size(840, 860); MinimumSize = new Size(640, 720);
             StartPosition = FormStartPosition.CenterScreen; Font = new Font("Segoe UI", 10);
             AutoScaleMode = AutoScaleMode.Dpi; AutoScaleDimensions = new SizeF(96F, 96F);

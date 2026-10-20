@@ -155,6 +155,7 @@ try {
             $shortcut = $shell.CreateShortcut((Join-Path $shortcutFolder 'SERVITEC VSA - Abrir chamado.lnk'))
             $shortcut.TargetPath = Join-Path $clientTarget 'ServitecClient.exe'
             $shortcut.WorkingDirectory = $clientTarget
+            $shortcut.IconLocation = (Join-Path $clientTarget 'ServitecClient.exe') + ',0'
             $shortcut.Description = 'Abrir chamado no Painel do Cliente SERVITEC VSA'
             $shortcut.Save()
         }

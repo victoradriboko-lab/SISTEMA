@@ -13,7 +13,7 @@ if not executable.startswith(b'MZ'):
 files = {name: (source / name).read_bytes() for name in [
     'instalar-agente.bat', 'instalar-agente-http.bat', 'instalar-agente.ps1', 'AgentNetwork.ps1', 'AgentService.ps1', 'desinstalar-agente.bat',
     'desinstalar-agente.ps1', 'ServitecAgent.exe.config', 'README.md',
-    'ServitecAgent.cs', 'AgentPolicy.cs', 'ServitecAgent.csproj',
+    'ServitecAgent.cs', 'AgentPolicy.cs', 'ServitecAgent.csproj', 'branding/servitec.ico',
 ]}
 client = (source / 'client/bin/Release/net462/ServitecClient.exe').read_bytes()
 if not client.startswith(b'MZ'):

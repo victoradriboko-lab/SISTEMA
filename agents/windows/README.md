@@ -62,3 +62,27 @@ O aplicativo Abrir chamado usa a identidade Servitec T.I., com cabeçalho preto,
 Para receber a nova interface, atualize o servidor, baixe novamente o instalador HTTP ou HTTPS apropriado e execute-o como administrador na máquina. Feche o aplicativo Abrir chamado antes de reinstalar. Os atalhos existentes continuam funcionando; seu nome no Windows é mantido para evitar atalhos duplicados.
 
 Validação: compilação .NET Framework 4.6.2, hashes do pacote, instaladores HTTP/HTTPS e testes da política do agente. A renderização nativa do Windows deve ser conferida na máquina após a atualização.
+
+### Ícone Servitec nos downloads e atalhos
+
+O arquivo `branding/servitec.ico` contém o símbolo Servitec adaptado da imagem
+fornecida, com transparência e tamanhos de 16 a 256 pixels. Os três projetos
+incorporam esse ícone. O aplicativo de chamados também usa o ícone na janela;
+os atalhos usam explicitamente o primeiro ícone de `ServitecClient.exe`.
+
+No Windows com .NET Framework 4.6.2 ou superior e Python 3, execute na raiz:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-agent-windows.ps1
+```
+
+O script recompila agente e aplicativo, recalcula os hashes do ZIP e recompila
+os instaladores HTTPS e HTTP. O workflow `build-agent-windows.yml` executa esse
+processo no GitHub e atualiza os três arquivos de download após uma compilação
+bem-sucedida. Se a política da branch recusar o envio automático, baixe o
+artefato do workflow e atualize os arquivos por um PR.
+
+Atualize o código no servidor após a compilação. Instalações existentes recebem
+os novos ícones ao reinstalar/atualizar com o pacote novo. O Windows pode manter
+um ícone antigo em cache por algum tempo. A personalização não adiciona uma
+interface de bandeja ao serviço e não altera tokens ou dados de instalação.

@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>ServitecAgentSetup</AssemblyName>
     <LangVersion>5</LangVersion>
+    <ApplicationIcon>../branding/servitec.ico</ApplicationIcon>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ApplicationManifest>app.manifest</ApplicationManifest>

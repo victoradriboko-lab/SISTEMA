@@ -1,0 +1,46 @@
+name: Compilar agente Windows com identidade Servitec
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'agents/windows/**'
+      - 'scripts/package-agent.py'
+      - 'scripts/build-agent-windows.ps1'
+      - '.github/workflows/build-agent-windows.yml'
+permissions:
+  contents: write
+concurrency:
+  group: servitec-windows-main
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Compilar e empacotar
+        shell: powershell
+        run: ./scripts/build-agent-windows.ps1
+      - name: Guardar instaladores
+        uses: actions/upload-artifact@v4
+        with:
+          name: Servitec-Agente-Windows
+          path: |
+            agents/windows/ServitecAgentSetup.exe
+            agents/windows/ServitecAgentSetupHttp.exe
+            agents/windows/servitec-agent-windows.zip
+      - name: Atualizar downloads da plataforma
+        shell: powershell
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add agents/windows/ServitecAgentSetup.exe agents/windows/ServitecAgentSetupHttp.exe agents/windows/servitec-agent-windows.zip
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+          git commit -m 'Atualiza instaladores Windows com icone Servitec [skip ci]'
+          if ($LASTEXITCODE -ne 0) { throw 'Falha ao registrar instaladores.' }
+          git push origin HEAD:main
+          if ($LASTEXITCODE -ne 0) { throw 'A branch mudou durante a compilacao. Execute novamente o workflow.' }

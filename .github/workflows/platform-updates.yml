@@ -1,0 +1,63 @@
+name: Testar plataforma e publicar pacote de versao
+on:
+  push:
+    branches: [main]
+    paths: ['*.mjs', 'package*.json', 'public/**', 'test/**', 'scripts/package-update.py', '.github/workflows/platform-updates.yml']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publicar Release estavel com servitec-update.json
+        type: boolean
+        default: false
+      from_version:
+        description: Versao instalada compativel com este pacote (exemplo 0.5.0)
+        required: false
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run check
+      - run: node --test --test-timeout=60000
+  update-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --test --test-timeout=60000 test/updates.test.mjs
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: [tests, update-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Gerar pacote de atualizacao
+        env:
+          FROM_VERSION: ${{ inputs.from_version }}
+        run: python scripts/package-update.py --from-version "$FROM_VERSION" --output work/servitec-update.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: servitec-update
+          path: work/servitec-update.json
+      - name: Publicar Release para aprovacao na plataforma
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python -c 'import json; print(json.load(open("package.json"))["version"])')
+          gh release create "v$version" work/servitec-update.json --title "Servitec $version" --notes-file RELEASE-NOTES.md --target "$GITHUB_SHA"

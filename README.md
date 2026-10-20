@@ -444,3 +444,83 @@ O inventário abre uma ficha com 18 seções, coleta Windows ampliada, históric
 ### Substituição autorizada dos tokens longos de empresa
 
 Por solicitação explícita do proprietário, que informou não haver agentes ativos, esta atualização troca os tokens de empresa com mais de 10 caracteres por valores únicos de 10 letras e números na primeira inicialização do servidor. Tokens antigos ficam inválidos. Clientes, usuários, equipamentos, senhas e históricos permanecem intactos. A migração é transacional e idempotente: os tokens curtos não mudam nos reinícios seguintes. Novos cadastros, importações e renovações usam o mesmo formato curto. Use o instalador/agente 1.2.1 e copie o token exatamente, respeitando maiúsculas e minúsculas. A troca não encurta senhas, hashes, chaves internas do aplicativo ou tokens individuais antigos dos equipamentos.
+
+## Atualizações de versão pela plataforma — 0.5.0
+
+Em **Configurações → Sistema**, o administrador vê a versão instalada e a nova
+versão estável publicada no GitHub. **Verificar GitHub** consulta imediatamente;
+o servidor também consulta a cada 30 minutos enquanto estiver ligado.
+**Notas da versão** abre a Release. A consulta nunca instala uma atualização.
+
+Para aplicar, informe sua senha de administrador e clique em **Atualizar pelo
+GitHub**. Confirme a versão na janela de aprovação. A aplicação baixa o pacote,
+valida a versão de origem, os hashes SHA-256, os caminhos e a sintaxe JavaScript,
+cria um backup e reinicia. O navegador acompanha o retorno e recarrega quando a
+versão entra em funcionamento. A operação fica registrada em Atividades.
+
+O repositório padrão é `victoradriboko-lab/SISTEMA`; a origem pode ser alterada
+na própria tela mediante senha. Para um repositório privado, configure
+`SERVITEC_UPDATE_GITHUB_TOKEN` no ambiente da conta que executa o servidor, com
+acesso de leitura de conteúdo apenas ao repositório desejado, e reinicie a
+tarefa. O token não é armazenado no navegador nem exibido pela API. Uma falha de
+consulta não afeta o uso normal. O servidor precisa acessar `api.github.com` e
+`release-assets.githubusercontent.com` por HTTPS.
+
+### Publicar uma versão disponível para atualização
+
+Use Releases estáveis (tag `v0.5.1`, por exemplo), com o arquivo
+`servitec-update.json` anexado. Commits na main e pré-lançamentos não são
+instalados pela tela. A versão da tag deve ser a mesma do pacote e do
+`package.json`. O pacote deve ser preparado para a versão instalada, indicada
+em `fromVersion`; mudanças de dependências/Node exigem manutenção no servidor.
+
+1. Faça somente migrações aditivas e idempotentes e atualize a versão de
+   `package.json`, `package-lock.json` e as notas em `RELEASE-NOTES.md`.
+2. No GitHub Actions, execute **Testar plataforma e publicar pacote de versao**,
+   marque `publish` e informe `from_version` (a versão anterior compatível).
+   A Release só é publicada depois de os testes passarem. O workflow não envia
+   dados ou credenciais da instalação.
+3. O administrador da plataforma verá a Release na próxima consulta e poderá
+   aprovar a instalação com sua senha.
+
+Também é possível gerar o pacote e anexá-lo manualmente à Release:
+
+```bash
+python scripts/package-update.py --from-version 0.5.0 --output work/servitec-update.json
+```
+
+Para instalar sem consultar o GitHub, abra **Atualização manual por arquivo**,
+selecione o JSON, informe a senha e confirme. Use apenas pacotes produzidos pelo
+responsável pelo projeto: os hashes detectam corrupção, não comprovam autoria.
+O pacote contém código que será executado com a conta do servidor. Não inclua
+banco de exemplo, redefinição de senha ou migração destrutiva.
+
+### Backup, reinicialização e reversão
+
+Continue iniciando com `node server.mjs`, `npm start` ou a tarefa
+`Servitec-Sistema`. A entrada agora supervisiona o processo da aplicação e
+reinicia somente após a atualização aprovada. Mantenha `DATA_DIR`, as variáveis
+de ambiente e a conta do serviço. A ativação inicial do atualizador requer o
+procedimento anterior: pare a tarefa, preserve um backup de `data`, atualize
+pelo GitHub e inicie novamente. Não substitua `data` nem a chave existente.
+
+Cada troca guarda, em `DATA_DIR/.updates/<identificador>/`, os arquivos
+anteriores no manifesto `release.json`, uma cópia SQLite consistente em
+`database-before.sqlite` e os demais dados em `data-before` (exceto logs).
+A conta do servidor precisa de espaço em disco e permissão para gravar na
+pasta da aplicação. Essas cópias contêm dados e credenciais; mantenha as
+mesmas restrições de acesso da pasta de dados. Não há remoção automática
+dessas cópias; faça a retenção pela manutenção do servidor, com a tarefa parada.
+
+**Voltar para a versão anterior** exige novamente senha e confirmação e
+restaura apenas o código, sem regravar o banco ou desfazer registros criados
+após a atualização. Isso exige que as versões permaneçam compatíveis com as
+migrações aditivas. Se a nova versão não anunciar a inicialização dos dois
+acessos em 45 segundos, o supervisor recupera o código anterior e o inicia.
+Um desligamento durante a troca também recupera os arquivos pelo diário de
+aplicação na próxima inicialização. Se até a versão anterior falhar, revise o
+log e o backup com a tarefa parada; não substitua o banco automaticamente.
+
+Testes: `test/updates.test.mjs` usa exclusivamente cópias e bancos temporários
+para validar senha, permissões, download sem vazamento de token, integridade,
+links, preservação de dados, atualização, reversão e falha de inicialização.

@@ -441,3 +441,13 @@ aside > nav { align-content: start; }
 @media(min-width:1700px) { :root[data-surface=internal][data-auth=guest] #content { max-width:1600px;padding-left:100px; }.servitec-entry { gap:52px; } }
 @media(max-width:1150px) { .servitec-entry { grid-template-columns:minmax(300px,414px) minmax(240px,340px);justify-content:center;gap:40px; }.entry-art { display:none; } }
 @media(max-width:700px) { :root[data-surface=internal][data-auth=guest] #content { padding:32px 20px; }.servitec-entry { grid-template-columns:minmax(0,414px);gap:32px; }.entry-story { padding:0;text-align:center; }.entry-story h2 { font-size:28px; }.entry-card { padding:26px 22px 20px; }.entry-card h1 { font-size:29px; }.entry-contact { max-width:310px;margin:auto; } }
+
+.system-update-panel .update-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0}
+.system-update-panel .system-update-release{border-left:3px solid var(--accent,#00aa40);padding-left:14px;margin:20px 0}
+.system-update-panel details{margin-top:20px}
+.system-update-panel summary{cursor:pointer;font-weight:600}
+.system-update-panel progress{width:100%;height:18px;margin:8px 0}
+.system-update-panel input[type="password"]{max-width:480px}
+.system-update-panel .update-message{border-left:3px solid #d28a20;padding:8px 12px}
+.system-update-panel .button{display:inline-block;padding:8px 14px;border:1px solid currentColor;border-radius:6px;text-decoration:none}
+.system-update-panel code{overflow-wrap:anywhere}

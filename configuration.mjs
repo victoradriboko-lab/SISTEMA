@@ -21,7 +21,7 @@ export const permissionCatalog = [
   {key:'audit.read',label:'Consultar histórico de atividades',group:'Configurações'},
   {key:'users.manage',label:'Gerenciar usuários e senhas',group:'Administração',locked:true},
   {key:'permissions.manage',label:'Criar perfis e editar permissões',group:'Administração',locked:true},
-  {key:'system.manage',label:'Consultar versão e gerenciar backups e agendamento',group:'Administração',locked:true},
+  {key:'system.manage',label:'Gerenciar versões, atualizações, backups e agendamento',group:'Administração',locked:true},
 ];
 const defaults={admin:permissionCatalog.map(p=>p.key),technician:['tickets.read','tickets.write','assets.read','assets.write','monitor.read'],viewer:['tickets.read','assets.read','monitor.read']};
 const companyFields=['name','legalName','cnpj','registration','address','city','phone','email','site'];

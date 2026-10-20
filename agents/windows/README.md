@@ -59,7 +59,7 @@ Validação de cenários de serviço e fila: `tests/ServiceUpdateTests.ps1`. O t
 
 O aplicativo Abrir chamado usa a identidade Servitec T.I., com cabeçalho preto, marca em roxo, área clara, campos brancos e botão verde. O formulário e a autorização da empresa continuam os mesmos. O instalador continua preservando a identificação da máquina e a fila local.
 
-Para receber a nova interface, atualize o servidor, baixe novamente o instalador HTTP ou HTTPS apropriado e execute-o como administrador na máquina. Feche o aplicativo Abrir chamado antes de reinstalar. Os atalhos existentes continuam funcionando; seu nome no Windows é mantido para evitar atalhos duplicados.
+Para receber a nova interface, atualize o servidor, baixe novamente o instalador HTTP ou HTTPS apropriado e execute-o como administrador na máquina. Feche o aplicativo Abrir chamado antes de reinstalar. Os atalhos se chamam `Servitec T.i. - Abrir Chamado`. Ao atualizar, o instalador remove o atalho antigo `SERVITEC VSA - Abrir chamado` somente quando ele aponta para este mesmo aplicativo.
 
 Validação: compilação .NET Framework 4.6.2, hashes do pacote, instaladores HTTP/HTTPS e testes da política do agente. A renderização nativa do Windows deve ser conferida na máquina após a atualização.
 

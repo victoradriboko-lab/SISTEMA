@@ -10,10 +10,12 @@ if ($service) {
 $clientExe = Join-Path $env:ProgramFiles 'ServitecClient\ServitecClient.exe'
 $shell = New-Object -ComObject WScript.Shell
 foreach ($folder in @([Environment]::GetFolderPath('CommonDesktopDirectory'),(Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'SERVITEC VSA'))) {
-    $link = Join-Path $folder 'SERVITEC VSA - Abrir chamado.lnk'
-    if (Test-Path -LiteralPath $link) {
-        $shortcut = $shell.CreateShortcut($link)
-        if ($shortcut.TargetPath -eq $clientExe) { Remove-Item -LiteralPath $link -Force }
+    foreach ($name in @('Servitec T.i. - Abrir Chamado.lnk','SERVITEC VSA - Abrir chamado.lnk')) {
+        $link = Join-Path $folder $name
+        if (Test-Path -LiteralPath $link) {
+            $shortcut = $shell.CreateShortcut($link)
+            if ($shortcut.TargetPath -eq $clientExe) { Remove-Item -LiteralPath $link -Force }
+        }
     }
 }
 Write-Host 'Atalhos de atendimento deste aplicativo removidos. Arquivos do cliente foram preservados.'

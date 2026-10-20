@@ -152,14 +152,19 @@ try {
         $menu = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'SERVITEC VSA'
         New-Item -ItemType Directory -Path $menu -Force | Out-Null
         foreach ($shortcutFolder in @([Environment]::GetFolderPath('CommonDesktopDirectory'),$menu)) {
-            $shortcut = $shell.CreateShortcut((Join-Path $shortcutFolder 'SERVITEC VSA - Abrir chamado.lnk'))
+            $shortcut = $shell.CreateShortcut((Join-Path $shortcutFolder 'Servitec T.i. - Abrir Chamado.lnk'))
             $shortcut.TargetPath = Join-Path $clientTarget 'ServitecClient.exe'
             $shortcut.WorkingDirectory = $clientTarget
             $shortcut.IconLocation = (Join-Path $clientTarget 'ServitecClient.exe') + ',0'
             $shortcut.Description = 'Abrir chamado no Painel do Cliente SERVITEC VSA'
             $shortcut.Save()
+            $legacyLink = Join-Path $shortcutFolder 'SERVITEC VSA - Abrir chamado.lnk'
+            if (Test-Path -LiteralPath $legacyLink) {
+                $legacyShortcut = $shell.CreateShortcut($legacyLink)
+                if ($legacyShortcut.TargetPath -eq $shortcut.TargetPath) { Remove-Item -LiteralPath $legacyLink -Force }
+            }
         }
-        Write-Host 'Atalhos SERVITEC VSA - Abrir chamado criados na Area de Trabalho e no menu Iniciar.' -ForegroundColor Green
+        Write-Host 'Atalhos Servitec T.i. - Abrir Chamado criados na Area de Trabalho e no menu Iniciar.' -ForegroundColor Green
     }
     $support = $null
     Write-Host 'Servico instalado e iniciado. Aguarde no log a mensagem: Primeira coleta aceita pelo servidor.' -ForegroundColor Green
